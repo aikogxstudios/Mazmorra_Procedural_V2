@@ -1,0 +1,129 @@
+schema_version: 1
+assets:
+  BP_DungeonGenerator_V2:
+    kind: "Blueprint Actor"
+    status: "implemented"
+    responsibility: "Logical layout, special room selection, physical spawning, corridors and doors."
+
+  ST_DungeonCell:
+    kind: "Blueprint Struct"
+    status: "implemented"
+    responsibility: "Logical room cell data."
+
+  ST_DungeonCellLink:
+    kind: "Blueprint Struct"
+    status: "implemented_validated"
+    responsibility: "Parent index and direction used to create each child cell."
+
+  E_DungeonDirection:
+    kind: "Blueprint Enum"
+    status: "implemented"
+    values: ["North", "East", "South", "West"]
+
+  E_DungeonRoomType:
+    kind: "Blueprint Enum"
+    status: "expanded"
+    implemented_values: ["Start", "Normal", "Key", "Boss"]
+    reserved_values:
+      - "Combat"
+      - "Treasure"
+      - "Puzzle"
+      - "Safe"
+      - "Shop"
+      - "Rest"
+      - "Boss Door"
+      - "Portal"
+      - "Secret"
+      - "Event"
+      - "Storage"
+      - "Trade"
+      - "Corridor"
+      - "Stairs Up"
+      - "Stairs Down"
+
+  BPI_DungeonRoomV2:
+    kind: "Blueprint Interface"
+    status: "implemented"
+    functions:
+      - "InitRoomFromCell"
+      - "GetDoorWorldLocation"
+      - "GetRoomBoundsData"
+
+  BP_Room_Debug_Start:
+    kind: "Blueprint Actor"
+    status: "implemented"
+    role: "Prebuilt Start room"
+    constraints:
+      - "One logical exit"
+      - "Any size"
+      - "Never Key or Boss"
+
+  BP_Room_Debug_Normal:
+    kind: "Blueprint Actor"
+    status: "historical"
+    role: "Previous normal debug room"
+
+  BP_Room_Debug_Key:
+    kind: "Blueprint Actor"
+    status: "implemented_temporary"
+    role: "Key room with delayed pickup spawn"
+
+  BP_Room_Debug_Boss:
+    kind: "Blueprint Actor"
+    status: "implemented"
+    role: "Prebuilt terminal Boss room"
+
+  BP_RoomMaster:
+    kind: "Blueprint Actor"
+    status: "original_untouched"
+    role: "Independent original procedural room system"
+
+  BP_RoomMaster_Dungeon:
+    kind: "Blueprint Actor"
+    status: "implemented_integrated"
+    role: "Procedural normal room compatible with Dungeon V2"
+    features:
+      - "Four dungeon-controlled openings"
+      - "RoomContentRoot centering"
+      - "RoomBounds"
+      - "BPI_DungeonRoomV2"
+
+  BP_FloorActor:
+    kind: "Blueprint Actor"
+    status: "implemented"
+    role: "HISM floor grid"
+
+  BP_WallActor:
+    kind: "Blueprint Actor"
+    status: "implemented"
+    role: "HISM wall, columns, edge columns and openings"
+
+  BP_CeilingActor:
+    kind: "Blueprint Actor"
+    status: "implemented"
+    role: "HISM ceiling grid"
+
+  BP_Corridor_Debug:
+    kind: "Blueprint Actor"
+    status: "implemented_protected"
+    role: "Corridor between two world-space DoorPoints"
+
+  BP_BossDoor_Lock:
+    kind: "Blueprint Actor"
+    status: "implemented_experimental"
+    role: "Locked Boss entrance requiring key item"
+
+  key_pickup:
+    kind: "Blueprint Actor"
+    status: "implemented_exact_name_pending"
+    role: "Adds key item to temporary inventory"
+
+  mini_inventory_component:
+    kind: "Actor Component"
+    status: "implemented_experimental_exact_name_pending"
+    role: "Stores temporary key item"
+
+  mini_inventory_ui:
+    kind: "Widget Blueprint"
+    status: "implemented_experimental_exact_name_pending"
+    role: "Displays temporary inventory; opened with O"
