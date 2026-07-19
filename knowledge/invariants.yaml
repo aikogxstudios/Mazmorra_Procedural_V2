@@ -1,0 +1,119 @@
+schema_version: 1
+
+index_invariants:
+  - id: "logical_link_physical_index"
+    expression: "DungeonCells[Index] == DungeonCellLinks[Index] == SpawnedRooms[Index]"
+    status: "critical"
+    rules:
+      - "Do not sort SpawnedRooms"
+      - "Do not insert decoration actors in SpawnedRooms"
+      - "Do not delete intermediate entries"
+      - "Do not append a cell without a link"
+      - "Do not append a link without a cell"
+      - "Do not silently continue after failed room spawn"
+
+  - id: "parent_precedes_child"
+    expression: "ParentCellIndex < ChildIndex"
+    status: "validated"
+    validated_room_counts: [10, 15, 20, 50, 150]
+
+  - id: "cells_equal_links"
+    expression: "DungeonCells.Num == DungeonCellLinks.Num"
+    status: "validated"
+    validated_room_counts: [10, 15, 20, 50, 150]
+
+start_invariants:
+  - expression: "DungeonCellLinks[0].ParentCellIndex == -1"
+    status: "validated"
+  - expression: "DungeonCellLinks[0].bHasParent == false"
+    status: "validated"
+  - expression: "ConnectionCount(DungeonCells[0]) == 1"
+    status: "validated"
+  - expression: "DungeonCells[0].RoomType == Start"
+    status: "confirmed"
+
+child_link_invariants:
+  - expression: "DungeonCellLinks[ChildIndex].bHasParent == true for ChildIndex > 0"
+    status: "validated"
+  - expression: "DirectionFromParent == Selected Direction used to update parent"
+    status: "confirmed_by_graph"
+  - expression: "DirectionFromParent != Opposite Direction semantic role"
+    status: "critical"
+
+connection_invariants:
+  - expression: "Every logical connection is symmetric"
+    status: "confirmed_system_behavior"
+  - expression: "SpawnCorridorsFromConnections processes only North and East"
+    status: "protected"
+  - expression: "GetNeighborCoord compares/changes both logical axes correctly"
+    status: "protected"
+  - expression: "IsCellOccupied matches GridX AND GridY"
+    status: "protected"
+
+room_generation_invariants:
+  - expression: "SetupFloor executes before walls, markers, centering and bounds"
+    status: "protected"
+  - expression: "GenerateRoom executes once per dungeon room initialization"
+    status: "protected"
+  - expression: "Placement retries move the same room without regenerating HISM"
+    status: "future_critical"
+  - expression: "RoomContentRoot contains geometry and arrows"
+    status: "confirmed"
+  - expression: "RoomBounds is not a child of RoomContentRoot"
+    status: "confirmed"
+
+mapping_invariants:
+  init_room_from_cell:
+    North: "SouthOpening"
+    East: "WestOpening"
+    South: "NorthOpening"
+    West: "EastOpening"
+    status: "protected"
+  get_door_world_location:
+    North: "Arrow_Entrance_South"
+    East: "Arrow_Exit_East"
+    South: "Arrow_Exit_North"
+    West: "Arrow_Exit_West"
+    status: "protected"
+  note: "The two mappings are intentionally different and must not be unified."
+
+bounds_invariants:
+  - expression: "RoomSizeX = RoomWidth * EffectiveTileSize"
+    status: "protected"
+  - expression: "RoomSizeY = RoomDepth * EffectiveTileSize"
+    status: "protected"
+  - expression: "RoomSizeZ = WallHeightTiles * WallTileHeight"
+    status: "protected"
+  - expression: "ExtentZ applies 0.5 exactly once"
+    status: "protected"
+  - expression: "RoomBounds Relative Z = RoomSizeZ * 0.5"
+    status: "protected"
+  - expression: "GetRoomBoundsData uses RoomBounds.GetComponentBounds"
+    status: "protected"
+
+wall_invariants:
+  - expression: "South and North use RoomWidth"
+    status: "protected"
+  - expression: "East and West use RoomDepth"
+    status: "protected"
+  - expression: "GenerateColumns calls IsOpeningCell"
+    status: "protected"
+  - expression: "Horizontal loops end at LengthTiles - 1"
+    status: "protected"
+  - expression: "Edge final X = ((LengthTiles - 1) * TileSize) + (TileSize * 0.5)"
+    status: "protected"
+
+boss_invariants:
+  - expression: "Preferred Boss candidate has ConnectionCount == 1"
+    status: "confirmed"
+  - expression: "Boss Door is spawned by generator, not embedded in Boss Room"
+    status: "confirmed"
+  - expression: "Boss Door yaw N=0 E=-90 S=180 W=90"
+    status: "protected"
+
+scope_invariants:
+  - "No PCG plugin"
+  - "No wall-to-wall connections in V1"
+  - "No total Level Instances migration without profiling"
+  - "No premature Child Actor refactor"
+  - "No new RoomTypes before placement stabilization"
