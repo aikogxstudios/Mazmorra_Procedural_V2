@@ -4,6 +4,49 @@
 
 Mantener el repositorio sincronizado con el Blueprint real y evitar que la documentación vuelva a quedar obsoleta.
 
+## Política permanente de memoria del proyecto
+
+Este repositorio es la **base de memoria oficial** de la Mazmorra Procedural V2.
+
+No debe depender solo de que el usuario, Aiko/ChatGPT, Codex o cualquier otro chat recuerden una decisión anterior.
+
+Regla operativa:
+
+```text
+Cada cambio confirmado en Unreal
+→ actualizar la documentación afectada
+→ actualizar el estado actual
+→ registrar la prueba
+→ dejar escrito el siguiente paso exacto
+```
+
+Actualizar la base cuando ocurra cualquiera de estos casos:
+
+```text
+Se crea una variable.
+Se cambia una variable o su default.
+Se crea una función.
+Se modifica el flujo de una función.
+Se cambia un pin, mapping o dirección.
+Se añade un struct, enum, componente o interfaz.
+Se corrige un bug.
+Se valida una prueba importante.
+Se descarta una idea.
+Se protege una parte estable con 🛑.
+Se descubre que la documentación era incorrecta.
+Se termina una fase de trabajo.
+```
+
+No es necesario hacer un commit por cada cable pequeño mientras una función está a medio montar. La actualización debe hacerse cuando:
+
+```text
+la modificación ya compila,
+se ha probado,
+o es suficientemente importante para no arriesgarse a olvidarla.
+```
+
+Al cerrar una fase, la actualización es obligatoria.
+
 ## Al terminar cada sesión
 
 ```text
@@ -16,6 +59,7 @@ Mantener el repositorio sincronizado con el Blueprint real y evitar que la docum
 7. Cambiar docs/13_ROADMAP.md si avanzó la fase.
 8. Actualizar docs/14_PROMPT_TRASPASO.md.
 9. Registrar nuevas capturas en docs/16_EVIDENCIAS_2026-07-19.md o crear un archivo de nueva fecha.
+10. Actualizar los YAML de knowledge/ si cambian estado, variables, funciones, assets o invariantes.
 ```
 
 ## Cuando se añade una variable
@@ -178,6 +222,14 @@ Si no se conoce el montaje exacto:
 → no proponer un cableado inventado
 ```
 
+Además:
+
+```text
+No confiar únicamente en la memoria del chat.
+Antes de continuar una fase nueva, consultar docs/00_ESTADO_ACTUAL.md.
+Después de confirmar un cambio importante, registrar ese cambio en GitHub.
+```
+
 ## Commits recomendados
 
 Mensajes simples:
@@ -208,5 +260,6 @@ crear una versión consolidada
 - [ ] Se ejecutó prueba grande si aplica.
 - [ ] No se rompieron mappings protegidos.
 - [ ] Se actualizaron docs.
+- [ ] Se actualizaron los YAML de `knowledge/` si aplica.
 - [ ] Se actualizó changelog.
 - [ ] El siguiente paso está escrito de forma exacta.
