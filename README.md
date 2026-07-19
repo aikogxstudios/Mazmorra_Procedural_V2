@@ -87,8 +87,15 @@ Todavía no se debe colocar toda la mazmorra padre-hija de una vez.
 | [`docs/15_INDICE_TECNICO.md`](docs/15_INDICE_TECNICO.md) | Lista rápida de assets, funciones y variables |
 | [`docs/16_EVIDENCIAS_2026-07-19.md`](docs/16_EVIDENCIAS_2026-07-19.md) | Capturas, vídeos y pruebas confirmadas de la sesión |
 | [`docs/17_MANTENIMIENTO_DOCUMENTACION.md`](docs/17_MANTENIMIENTO_DOCUMENTACION.md) | Cómo actualizar la base técnica en futuras sesiones |
+| [`docs/18_DUDAS_Y_VERIFICACIONES_PENDIENTES.md`](docs/18_DUDAS_Y_VERIFICACIONES_PENDIENTES.md) | Información que aún requiere captura o confirmación |
+| [`docs/19_MAPA_DEPENDENCIAS.md`](docs/19_MAPA_DEPENDENCIAS.md) | Dependencias entre Blueprints, funciones y datos |
+| [`docs/20_FORMULAS_Y_VALORES.md`](docs/20_FORMULAS_Y_VALORES.md) | Fórmulas protegidas y valores de referencia |
 | [`CHANGELOG.md`](CHANGELOG.md) | Historial cronológico de cambios y validaciones |
 | [`archive/PROMPT_TRASPASO_MAZMORRA_V2_TOTAL_v7_2026-07-19.md`](archive/PROMPT_TRASPASO_MAZMORRA_V2_TOTAL_v7_2026-07-19.md) | Prompt histórico v7 |
+
+## Seguimiento
+
+La siguiente fase está registrada en la Issue **#1 — SpawnStartRoom**.
 
 ## Principios del sistema
 
