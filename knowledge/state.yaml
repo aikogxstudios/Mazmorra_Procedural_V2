@@ -1,0 +1,118 @@
+schema_version: 1
+last_updated: "2026-07-19"
+project:
+  game: "Caos Entre Reinos / Chaos Among Realms: Reborn"
+  system: "Aguja del Caos / Mazmorra Procedural V2"
+  engine: "Unreal Engine 5.4"
+  implementation: "Blueprints"
+
+certainty_legend:
+  confirmed: "✅"
+  conceptual: "🟡"
+  not_visible: "⚪"
+  pending: "⏳"
+  future: "🔮"
+  protected: "🛑"
+
+truth_priority:
+  - "docs/00_ESTADO_ACTUAL.md"
+  - "Current Unreal Engine captures and tests"
+  - "Structured repository documentation"
+  - "Historical documentation"
+
+current_phase:
+  completed:
+    - "ST_DungeonCellLink created"
+    - "DungeonCellLinks array created"
+    - "Start link created"
+    - "Child links created in TryAddRandomCell"
+    - "Cells and Links counts validated"
+    - "ParentCellIndex validated"
+    - "Start limited to one logical exit"
+  next: "SpawnStartRoom"
+  blocked_on:
+    - "Complete screenshots of SpawnRoomsFromCells"
+
+validated_room_counts:
+  - 10
+  - 15
+  - 20
+  - 50
+  - 150
+
+validated_invariants:
+  cells_equal_links: true
+  start_has_parent: false
+  start_parent_index: -1
+  child_has_parent: true
+  parent_before_child: true
+  start_connection_count: 1
+
+current_spawn_flow:
+  - "GenerateDungeon"
+  - "Switch Has Authority"
+  - "ResetDungeon"
+  - "InitRandomStream"
+  - "CreateStartCell"
+  - "BuildDungeonLayout"
+  - "ChooseKeyAndBossCells"
+  - "SpawnRoomsFromCells"
+  - "SpawnCorridorsFromConnections"
+  - "SpawnBossRoomDoors"
+  - "DebugDrawDoorPoints"
+  - "DebugDrawDoorToDoorConnections"
+
+room_master_identity:
+  original:
+    asset: "BP_RoomMaster"
+    modified: false
+  dungeon_variant:
+    asset: "BP_RoomMaster_Dungeon"
+    modified: true
+    interface: "BPI_DungeonRoomV2"
+
+critical_mappings:
+  init_room_from_cell:
+    North: "SouthOpening"
+    East: "WestOpening"
+    South: "NorthOpening"
+    West: "EastOpening"
+  get_door_world_location:
+    North: "Arrow_Entrance_South"
+    East: "Arrow_Exit_East"
+    South: "Arrow_Exit_North"
+    West: "Arrow_Exit_West"
+  boss_door_yaw:
+    North: 0
+    East: -90
+    South: 180
+    West: 90
+
+current_debug:
+  cells_links_print:
+    enabled: false
+    preserved: true
+  links_detail_print:
+    enabled: false
+    preserved: true
+
+next_acceptance_criteria:
+  function: "SpawnStartRoom"
+  checks:
+    - "DungeonCells index 0 valid"
+    - "DungeonCellLinks index 0 valid"
+    - "StartDebugRoomClass valid"
+    - "Only one room spawned"
+    - "SpawnedRooms.Num == 1"
+    - "SpawnedRooms[0] valid"
+    - "InitRoomFromCell called with DungeonCells[0]"
+    - "Start keeps one opening"
+
+out_of_scope_now:
+  - "Spawn all child rooms"
+  - "Full overlap system"
+  - "Variable corridor retry system"
+  - "Wall-to-wall connections"
+  - "Level Instances migration"
+  - "New room types"
+  - "Final inventory"
