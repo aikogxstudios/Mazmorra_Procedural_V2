@@ -1,0 +1,207 @@
+schema_version: 1
+
+BP_DungeonGenerator_V2:
+  variables:
+    CorridorDebugClass:
+      type: "Actor Class Reference"
+      category: "Pasillos"
+      status: "confirmed"
+    SpawnedCorridors:
+      type: "Array Actor Reference"
+      category: "Pasillos"
+      status: "confirmed"
+    CellSize:
+      type: "Float"
+      category: "Habitaciones"
+      status: "confirmed"
+    DungeonSeed:
+      type: "Integer"
+      category: "Habitaciones"
+      status: "confirmed"
+    MaxGenerationAttempts:
+      type: "Integer"
+      category: "Habitaciones"
+      status: "confirmed"
+    StartDebugRoomClass:
+      type: "Actor Class Reference"
+      category: "Habitaciones"
+      status: "confirmed"
+    SpawnedRooms:
+      type: "Array Actor Reference"
+      category: "Habitaciones"
+      status: "confirmed"
+    DungeonCells:
+      type: "Array ST_DungeonCell"
+      category: "Habitaciones"
+      status: "confirmed"
+    RandomStream:
+      type: "Random Stream"
+      category: "Habitaciones"
+      status: "confirmed"
+    MaxRooms:
+      type: "Integer"
+      category: "Habitaciones"
+      status: "confirmed"
+    bUseRandomSeed:
+      type: "Boolean"
+      category: "Habitaciones"
+      status: "confirmed"
+    SelectedRoomClass:
+      type: "Actor Class Reference"
+      category: "Habitaciones"
+      status: "confirmed"
+    DebugRoomClass:
+      type: "Actor Class Reference"
+      category: "Debug"
+      status: "confirmed"
+    bGenerateonBeginPlay:
+      type: "Boolean"
+      category: "Debug"
+      status: "confirmed"
+    bDebugDungeon:
+      type: "Boolean"
+      category: "Debug"
+      status: "confirmed"
+    BossCellIndex:
+      type: "Integer"
+      category: "Boss Room"
+      status: "confirmed"
+    BossGridX:
+      type: "Integer"
+      category: "Boss Room"
+      status: "confirmed"
+    BossGridY:
+      type: "Integer"
+      category: "Boss Room"
+      status: "confirmed"
+    BossDebugRoomClass:
+      type: "Actor Class Reference"
+      category: "Boss Room"
+      status: "confirmed"
+    BestBossDistance:
+      type: "Integer"
+      category: "Boss Room"
+      status: "documented"
+    KeyCellIndex:
+      type: "Integer"
+      category: "Key Room"
+      status: "confirmed"
+    KeyGridX:
+      type: "Integer"
+      category: "Key Room"
+      status: "confirmed"
+    KeyGridY:
+      type: "Integer"
+      category: "Key Room"
+      status: "confirmed"
+    KeyDebugRoomClass:
+      type: "Actor Class Reference"
+      category: "Key Room"
+      status: "confirmed"
+    BestKeyDistance:
+      type: "Integer"
+      category: "Key Room"
+      status: "documented"
+      note: "Stores KeyScore, not a simple distance."
+    BossDoorClass:
+      type: "Actor Class Reference"
+      category: "Puertas"
+      status: "confirmed"
+    SpawnedDungeonDoors:
+      type: "Array Actor Reference"
+      category: "Puertas"
+      status: "confirmed"
+    DungeonCellLinks:
+      type: "Array ST_DungeonCellLink"
+      category: "Puertas"
+      status: "confirmed"
+
+BP_RoomMaster_Dungeon:
+  variables:
+    RoomWidth: {type: "Integer", category: "Room", status: "confirmed"}
+    RoomDepth: {type: "Integer", category: "Room", status: "confirmed"}
+    WallHeightTiles: {type: "Integer", category: "Room", status: "confirmed"}
+    TileSize: {type: "Float", category: "Room", status: "confirmed"}
+    EffectiveTileSize: {type: "Float", category: "Room", status: "confirmed"}
+    WallTileHeight: {type: "Float", category: "Room", status: "confirmed"}
+    bGenerateCeiling: {type: "Boolean", category: "Room", status: "confirmed"}
+    bRandomizeRoomSize: {type: "Boolean", category: "Room", status: "confirmed"}
+    MinRoomWidth: {type: "Integer", category: "Room", status: "confirmed"}
+    MaxRoomWidth: {type: "Integer", category: "Room", status: "confirmed"}
+    MinRoomDepth: {type: "Integer", category: "Room", status: "confirmed"}
+    MaxRoomDepth: {type: "Integer", category: "Room", status: "confirmed"}
+    OpeningWidthTiles: {type: "Integer", category: "Opening", status: "confirmed"}
+    OpeningHeightTiles: {type: "Integer", category: "Opening", status: "documented"}
+    bNorthOpening: {type: "Boolean", category: "Opening", status: "documented"}
+    bEastOpening: {type: "Boolean", category: "Opening", status: "documented"}
+    bWestOpening: {type: "Boolean", category: "Opening", status: "documented"}
+    bSouthOpening: {type: "Boolean", category: "Dungeon", status: "confirmed"}
+    bRandomizeExits: {type: "Boolean", category: "Opening", status: "documented"}
+    bUseDungeonConnections: {type: "Boolean", category: "Dungeon", status: "confirmed"}
+    CurrentCellData: {type: "ST_DungeonCell", category: "Dungeon", status: "confirmed"}
+    ActiveExitArrows: {type: "Array Arrow Component Reference", category: "Opening", status: "documented"}
+    ActiveExitDirections: {type: "Array Name", category: "Opening", status: "documented"}
+    BoundsPadding:
+      type: "Float"
+      category: "Bounds"
+      status: "confirmed"
+      reference_value: 5
+    BoundsPaddingZ:
+      type: "Float"
+      category: "Bounds"
+      status: "confirmed"
+      reference_value: 20
+    BoundsHalfHeight:
+      type: "Float"
+      category: "Bounds"
+      status: "exists_usage_unverified"
+      reference_value: 300
+
+BP_FloorActor:
+  variables:
+    WidthTiles: {type: "Integer", status: "documented"}
+    DepthTiles: {type: "Integer", status: "documented"}
+    TileSize: {type: "Float", status: "documented"}
+    bAutoTileSize: {type: "Boolean", status: "documented"}
+    FloorMesh: {type: "Static Mesh Reference", status: "documented"}
+    FloorMaterial: {type: "Material Interface Reference", status: "documented"}
+    bOverrideFloorMaterial: {type: "Boolean", status: "documented"}
+    ThemeName: {type: "Name", status: "documented"}
+    CurrentX: {type: "Integer", status: "documented"}
+
+BP_WallActor:
+  variables:
+    LengthTiles: {type: "Integer", status: "documented"}
+    HeightTiles: {type: "Integer", status: "documented"}
+    TileSize: {type: "Float", status: "documented"}
+    WallTileHeight: {type: "Float", status: "documented"}
+    bAutoTileSize: {type: "Boolean", status: "documented"}
+    bAutoWallHeight: {type: "Boolean", status: "documented"}
+    CurrentX: {type: "Integer", status: "documented"}
+    MeshMinZ: {type: "Float", status: "documented"}
+    WallMesh: {type: "Static Mesh Reference", status: "documented"}
+    WallMaterial: {type: "Material Interface Reference", status: "documented"}
+    bOverrideWallMaterial: {type: "Boolean", status: "documented"}
+    ThemeName: {type: "Name", status: "documented"}
+    bGenerateColumns: {type: "Boolean", status: "documented"}
+    ColumnMesh: {type: "Static Mesh Reference", status: "documented"}
+    ColumnMaterial: {type: "Material Interface Reference", status: "documented"}
+    bOverrideColumnMaterial: {type: "Boolean", status: "documented"}
+    ColumnSpacing: {type: "Integer", status: "documented"}
+    ColumnForwardOffset: {type: "Float", status: "documented"}
+    ColumnMinZ: {type: "Float", status: "documented"}
+    CurrentColumnIndex: {type: "Integer", status: "documented"}
+    HasOpening: {type: "Boolean", status: "documented"}
+    OpeningStartIndex: {type: "Integer", status: "documented"}
+    OpeningWidthTiles: {type: "Integer", status: "documented"}
+    OpeningHeightTiles: {type: "Integer", status: "documented", reference_value: 1}
+    bGenerateEdgeColumns: {type: "Boolean", status: "documented"}
+    EdgeColumnMesh: {type: "Static Mesh Reference", status: "documented"}
+    EdgeColumnMaterial: {type: "Material Interface Reference", status: "documented"}
+
+future_placement_variables:
+  MinCorridorLength: {type: "Float", status: "future"}
+  MaxInitialCorridorLength: {type: "Float", status: "future"}
+  PlacementRetryStep: {type: "Float", status: "future"}
+  MaxPlacementAttempts: {type: "Integer", status: "future"}
+  RoomPlacementPadding: {type: "Float", status: "future"}
