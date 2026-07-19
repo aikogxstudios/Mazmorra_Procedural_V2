@@ -1,0 +1,185 @@
+schema_version: 1
+blueprint: "BP_DungeonGenerator_V2"
+type: "Blueprint Actor"
+component_count_confirmed: 1
+components:
+  - name: "Scene"
+    type: "Scene Component"
+    certainty: "confirmed"
+
+functions:
+  - name: "GenerateDungeon"
+    status: "confirmed"
+    responsibility: "Coordinate the full dungeon generation flow under authority."
+    calls:
+      - "ResetDungeon"
+      - "InitRandomStream"
+      - "CreateStartCell"
+      - "BuildDungeonLayout"
+      - "ChooseKeyAndBossCells"
+      - "SpawnRoomsFromCells"
+      - "SpawnCorridorsFromConnections"
+      - "SpawnBossRoomDoors"
+      - "DebugDrawDoorPoints"
+      - "DebugDrawDoorToDoorConnections"
+
+  - name: "ResetDungeon"
+    status: "protected"
+    responsibility: "Destroy generated doors, corridors and rooms; clear logical arrays and reset special indices."
+    writes:
+      - "SpawnedDungeonDoors"
+      - "SpawnedCorridors"
+      - "SpawnedRooms"
+      - "DungeonCells"
+      - "DungeonCellLinks"
+      - "BossCellIndex"
+      - "KeyCellIndex"
+      - "BestBossDistance"
+      - "BestKeyDistance"
+
+  - name: "InitRandomStream"
+    status: "confirmed_conceptual"
+    responsibility: "Initialize RandomStream from dungeon seed configuration."
+
+  - name: "CreateStartCell"
+    status: "confirmed"
+    responsibility: "Create DungeonCells[0] and DungeonCellLinks[0]."
+    produces:
+      cell:
+        GridX: 0
+        GridY: 0
+        RoomType: "Start"
+        RoomID: 0
+      link:
+        ParentCellIndex: -1
+        DirectionFromParent: "North"
+        bHasParent: false
+
+  - name: "IsCellOccupied"
+    status: "protected"
+    responsibility: "Return true when any DungeonCell matches both GridX and GridY."
+
+  - name: "GetNeighborCoord"
+    status: "protected"
+    responsibility: "Calculate logical neighbor coordinate."
+    mapping:
+      North: [0, 1]
+      East: [1, 0]
+      South: [0, -1]
+      West: [-1, 0]
+
+  - name: "TryAddRandomCell"
+    status: "confirmed"
+    responsibility: "Select a parent and direction, create a connected child, and append its parent link."
+    output:
+      Added: "Boolean"
+    locals:
+      - "Random Cell Index"
+      - "Selected Cell"
+      - "Random Direction Index"
+      - "Selected Direction"
+      - "Neighbor X"
+      - "Neighbor Y"
+      - "New Room Seed"
+      - "Updated Selected Cell"
+      - "New Base Cell"
+      - "Opposite Direction"
+      - "New Connected Cell"
+    child_link:
+      ParentCellIndex: "Random Cell Index"
+      DirectionFromParent: "Selected Direction"
+      bHasParent: true
+    start_guard:
+      condition: "Random Cell Index == 0 AND any Selected Cell connection is true"
+      result: "Return Added=false"
+    validated_counts: [10, 15, 20, 50, 150]
+
+  - name: "BuildDungeonLayout"
+    status: "protected"
+    responsibility: "Call TryAddRandomCell until MaxRooms or MaxGenerationAttempts."
+
+  - name: "SpawnRoomsFromCells"
+    status: "pending_replacement"
+    responsibility: "Spawn all rooms using Grid*CellSize."
+    known_flow:
+      - "ForEach DungeonCells"
+      - "GridX * CellSize"
+      - "GridY * CellSize"
+      - "Select class by RoomType"
+      - "SpawnActor"
+      - "InitRoomFromCell"
+      - "Add SpawnedRooms"
+    exact_graph_visible: false
+
+  - name: "GetOppositeDirection"
+    status: "protected"
+    mapping:
+      North: "South"
+      East: "West"
+      South: "North"
+      West: "East"
+
+  - name: "SetConnectionOnCell"
+    status: "protected"
+    inputs:
+      In_Cell: "ST_DungeonCell"
+      Direction: "E_DungeonDirection"
+    outputs:
+      Out_Cell: "ST_DungeonCell"
+    modifies_array_directly: false
+
+  - name: "DebugPrintLayout"
+    status: "confirmed"
+    responsibility: "Print cell coordinates, connections and RoomType when bDebugDungeon is true."
+
+  - name: "DebugDrawConnections"
+    status: "confirmed_conceptual"
+    responsibility: "Draw lines between logically connected cells."
+
+  - name: "DebugDrawDoorPoints"
+    status: "confirmed_conceptual"
+    responsibility: "Draw active door points on spawned rooms."
+
+  - name: "FindCellIndexByCoord"
+    status: "protected"
+    responsibility: "Return matching DungeonCells index or -1."
+
+  - name: "DebugDrawDoorToDoorConnections"
+    status: "confirmed_conceptual"
+    responsibility: "Draw lines between real connected room DoorPoints."
+
+  - name: "SpawnCorridorsFromConnections"
+    status: "protected"
+    responsibility: "Spawn one corridor per logical connection using real DoorPoints."
+    processed_directions: ["North", "East"]
+
+  - name: "ChooseKeyAndBossCells"
+    status: "protected"
+    responsibility: "Choose terminal Boss and exploration Key cells."
+    boss_rule: "Non-Start dead-end with maximum Manhattan distance from origin."
+    key_rule: "Non-Start, non-Boss, DistanceFromStart>=3, maximum DistanceFromBoss*DistanceFromStart."
+
+  - name: "SpawnBossRoomDoors"
+    status: "protected"
+    responsibility: "Spawn a Boss Door on each active Boss connection, normally one."
+
+  - name: "SpawnDoorAtRoomDirection"
+    status: "protected"
+    inputs:
+      RoomActor: "Actor Reference"
+      Direction: "E_DungeonDirection"
+    responsibility: "Get room DoorWorldLocation, select yaw, spawn BossDoorClass, store reference."
+
+future_functions:
+  - name: "SpawnStartRoom"
+    status: "next"
+  - name: "SpawnRemainingRoomsFromParents"
+    status: "future"
+  - name: "PlaceChildRoomFromParent"
+    status: "future"
+  - name: "DoesRoomOverlapPlacedRooms"
+    status: "future"
+  - name: "GetDirectionVector"
+    status: "future"
+  - name: "ValidateDungeonData"
+    status: "future_optional"
