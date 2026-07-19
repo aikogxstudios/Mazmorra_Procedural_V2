@@ -83,8 +83,12 @@ Todavía no se debe colocar toda la mazmorra padre-hija de una vez.
 | [`docs/11_ERRORES_Y_DECISIONES.md`](docs/11_ERRORES_Y_DECISIONES.md) | Errores históricos, soluciones y partes protegidas |
 | [`docs/12_FUNCIONES_DEBUG.md`](docs/12_FUNCIONES_DEBUG.md) | Herramientas visuales y prints de diagnóstico |
 | [`docs/13_ROADMAP.md`](docs/13_ROADMAP.md) | Orden de implementación aprobado |
-| [`docs/14_PROMPT_TRASPASO.md`](docs/14_PROMPT_TRASPASO.md) | Prompt para continuar en otro chat |
+| [`docs/14_PROMPT_TRASPASO.md`](docs/14_PROMPT_TRASPASO.md) | Prompt operativo para continuar en otro chat |
+| [`docs/15_INDICE_TECNICO.md`](docs/15_INDICE_TECNICO.md) | Lista rápida de assets, funciones y variables |
+| [`docs/16_EVIDENCIAS_2026-07-19.md`](docs/16_EVIDENCIAS_2026-07-19.md) | Capturas, vídeos y pruebas confirmadas de la sesión |
+| [`docs/17_MANTENIMIENTO_DOCUMENTACION.md`](docs/17_MANTENIMIENTO_DOCUMENTACION.md) | Cómo actualizar la base técnica en futuras sesiones |
 | [`CHANGELOG.md`](CHANGELOG.md) | Historial cronológico de cambios y validaciones |
+| [`archive/PROMPT_TRASPASO_MAZMORRA_V2_TOTAL_v7_2026-07-19.md`](archive/PROMPT_TRASPASO_MAZMORRA_V2_TOTAL_v7_2026-07-19.md) | Prompt histórico v7 |
 
 ## Principios del sistema
 
