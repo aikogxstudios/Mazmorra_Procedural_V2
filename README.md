@@ -90,12 +90,31 @@ Todavía no se debe colocar toda la mazmorra padre-hija de una vez.
 | [`docs/18_DUDAS_Y_VERIFICACIONES_PENDIENTES.md`](docs/18_DUDAS_Y_VERIFICACIONES_PENDIENTES.md) | Información que aún requiere captura o confirmación |
 | [`docs/19_MAPA_DEPENDENCIAS.md`](docs/19_MAPA_DEPENDENCIAS.md) | Dependencias entre Blueprints, funciones y datos |
 | [`docs/20_FORMULAS_Y_VALORES.md`](docs/20_FORMULAS_Y_VALORES.md) | Fórmulas protegidas y valores de referencia |
+| [`docs/21_BP_CORRIDOR_DEBUG.md`](docs/21_BP_CORRIDOR_DEBUG.md) | Comportamiento conocido y pendientes del corredor |
+| [`docs/22_BOSS_DOOR_KEY_INVENTORY.md`](docs/22_BOSS_DOOR_KEY_INVENTORY.md) | Boss Door, Key Room y mini inventario temporal |
+| [`docs/23_SEEDS_Y_REPRODUCIBILIDAD.md`](docs/23_SEEDS_Y_REPRODUCIBILIDAD.md) | RandomStream, RoomSeed y determinismo |
+| [`docs/24_GLOSARIO.md`](docs/24_GLOSARIO.md) | Glosario técnico del sistema |
+| [`docs/25_DIAGRAMAS_DE_FLUJO.md`](docs/25_DIAGRAMAS_DE_FLUJO.md) | Diagramas ASCII de los flujos principales |
+| [`knowledge/README.md`](knowledge/README.md) | Guía de la base machine-readable |
+| [`knowledge/state.yaml`](knowledge/state.yaml) | Estado actual estructurado |
+| [`knowledge/assets.yaml`](knowledge/assets.yaml) | Inventario estructurado de assets |
+| [`knowledge/bp_dungeon_generator_v2.yaml`](knowledge/bp_dungeon_generator_v2.yaml) | Base estructurada de funciones del generador |
+| [`knowledge/variables.yaml`](knowledge/variables.yaml) | Base estructurada de variables |
+| [`knowledge/invariants.yaml`](knowledge/invariants.yaml) | Invariantes críticas estructuradas |
 | [`CHANGELOG.md`](CHANGELOG.md) | Historial cronológico de cambios y validaciones |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Cómo mantener la documentación |
 | [`archive/PROMPT_TRASPASO_MAZMORRA_V2_TOTAL_v7_2026-07-19.md`](archive/PROMPT_TRASPASO_MAZMORRA_V2_TOTAL_v7_2026-07-19.md) | Prompt histórico v7 |
 
 ## Seguimiento
 
 La siguiente fase está registrada en la Issue **#1 — SpawnStartRoom**.
+
+Hay plantillas de issues para:
+
+```text
+Cambios de Blueprint
+Bugs reproducibles
+```
 
 ## Principios del sistema
 
