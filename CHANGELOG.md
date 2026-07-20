@@ -2,6 +2,31 @@
 
 Todos los cambios técnicos importantes deben añadirse aquí y reflejarse también en `docs/00_ESTADO_ACTUAL.md`.
 
+## 2026-07-20 — Cierre de sesión y memoria permanente
+
+### Confirmado
+
+- Se mantiene validado `DungeonCells.Num == DungeonCellLinks.Num` con 10, 15, 20, 50 y 150 habitaciones.
+- `ParentCellIndex < ChildIndex` continúa confirmado.
+- La Start conserva exactamente una salida lógica.
+- Los prints temporales de cantidades y links quedan desactivados, pero conservados.
+
+### Memoria técnica
+
+- El repositorio queda establecido como memoria técnica oficial de la Mazmorra Procedural V2.
+- Añadida política permanente de actualización tras funciones probadas, bugs corregidos, fases cerradas y decisiones importantes.
+- Añadido cierre de sesión en `sessions/2026-07-20_CIERRE_SESION.md`.
+- Actualizado `knowledge/state.yaml` con el punto exacto de continuación.
+
+### Siguiente paso
+
+```text
+Revisar capturas completas de SpawnRoomsFromCells
+→ crear y probar únicamente SpawnStartRoom
+```
+
+---
+
 ## 2026-07-19 — Base de conocimiento GitHub
 
 ### Documentación
