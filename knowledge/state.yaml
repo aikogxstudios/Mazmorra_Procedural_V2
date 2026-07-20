@@ -1,5 +1,5 @@
 schema_version: 1
-last_updated: "2026-07-19"
+last_updated: "2026-07-20"
 project:
   game: "Caos Entre Reinos / Chaos Among Realms: Reborn"
   system: "Aguja del Caos / Mazmorra Procedural V2"
@@ -29,7 +29,8 @@ current_phase:
     - "Cells and Links counts validated"
     - "ParentCellIndex validated"
     - "Start limited to one logical exit"
-  next: "SpawnStartRoom"
+    - "GitHub repository established as official technical memory"
+  next: "Review SpawnRoomsFromCells screenshots, then implement only SpawnStartRoom"
   blocked_on:
     - "Complete screenshots of SpawnRoomsFromCells"
 
@@ -95,6 +96,29 @@ current_debug:
   links_detail_print:
     enabled: false
     preserved: true
+
+memory_policy:
+  repository_is_official_memory: true
+  update_when:
+    - "A function or modification compiles and is tested"
+    - "A bug is fixed"
+    - "A phase is completed"
+    - "A variable, struct, enum, mapping or invariant changes"
+    - "An important architectural decision is accepted or discarded"
+  update_targets:
+    - "docs/00_ESTADO_ACTUAL.md"
+    - "Affected subsystem document"
+    - "docs/10_PRUEBAS_Y_REGRESION.md"
+    - "CHANGELOG.md"
+    - "docs/13_ROADMAP.md when phase changes"
+    - "docs/14_PROMPT_TRASPASO.md"
+    - "knowledge YAML when critical data changes"
+  do_not_wait_for_chat_memory: true
+
+session_close:
+  date: "2026-07-20"
+  handoff_file: "sessions/2026-07-20_CIERRE_SESION.md"
+  status: "Work paused cleanly before SpawnStartRoom"
 
 next_acceptance_criteria:
   function: "SpawnStartRoom"
