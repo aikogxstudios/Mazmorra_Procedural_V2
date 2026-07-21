@@ -1,5 +1,5 @@
 schema_version: 1
-last_updated: "2026-07-20"
+last_updated: "2026-07-21"
 project:
   game: "Caos Entre Reinos / Chaos Among Realms: Reborn"
   system: "Aguja del Caos / Mazmorra Procedural V2"
@@ -30,9 +30,14 @@ current_phase:
     - "ParentCellIndex validated"
     - "Start limited to one logical exit"
     - "GitHub repository established as official technical memory"
-  next: "Review SpawnRoomsFromCells screenshots, then implement only SpawnStartRoom"
+    - "SpawnRoomsFromCells fully reviewed by screenshots"
+    - "SpawnStartRoom created"
+    - "SpawnStartRoom compiled and tested in isolation"
+    - "SpawnedRooms index 0 validated as Start"
+  active: "Phase D - Spawn and align only ChildIndex 1"
+  next: "Create the controlled first-child placement flow using DungeonCellLinks[1]"
   blocked_on:
-    - "Complete screenshots of SpawnRoomsFromCells"
+    - "Blueprint construction and screenshots for the first-child flow"
 
 validated_room_counts:
   - 10
@@ -48,8 +53,53 @@ validated_invariants:
   child_has_parent: true
   parent_before_child: true
   start_connection_count: 1
+  spawned_rooms_zero_is_start: true
 
-current_spawn_flow:
+spawn_start_room:
+  status: "confirmed"
+  function: "SpawnStartRoom"
+  owner: "BP_DungeonGenerator_V2"
+  inputs: []
+  outputs: []
+  validations:
+    dungeon_cells_index_0_valid: true
+    room_type_is_start: true
+    spawn_return_value_validated: true
+  spawn:
+    class: "Start Room Class / StartDebugRoomClass"
+    location_source: "BP_DungeonGenerator_V2.GetActorLocation"
+    rotation: [0, 0, 0]
+    scale: [1, 1, 1]
+    collision_handling: "Default"
+  initialization:
+    interface_call: "Init Room from Cell"
+    cell_data: "DungeonCells[0]"
+    add_to_array: "SpawnedRooms"
+    expected_index: 0
+  test_results:
+    compiles: true
+    only_start_spawned: true
+    spawned_rooms_num: 1
+    spawned_rooms_0_valid: true
+    start_one_opening: true
+    child_rooms_spawned: false
+  protected_rules:
+    - "Do not use DebugRoomClass for Start"
+    - "Do not set transform Scale Z to 0"
+    - "Validate SpawnActor Return Value before InitRoomFromCell or Add"
+    - "Call InitRoomFromCell only once"
+    - "Keep Start as SpawnedRooms[0]"
+
+approved_v1_room_count:
+  status: "conceptual_not_implemented"
+  normal_rooms: 15
+  start_rooms: 1
+  key_rooms: 1
+  boss_rooms: 1
+  total_physical_rooms: 18
+  rule: "Start, Key and Boss do not consume the 15 normal-room count but remain in indexed arrays"
+
+stable_full_spawn_flow_before_refactor:
   - "GenerateDungeon"
   - "Switch Has Authority"
   - "ResetDungeon"
@@ -115,22 +165,22 @@ memory_policy:
     - "knowledge YAML when critical data changes"
   do_not_wait_for_chat_memory: true
 
-session_close:
-  date: "2026-07-20"
-  handoff_file: "sessions/2026-07-20_CIERRE_SESION.md"
-  status: "Work paused cleanly before SpawnStartRoom"
-
 next_acceptance_criteria:
-  function: "SpawnStartRoom"
+  function_or_flow: "First child placement, ChildIndex 1"
   checks:
-    - "DungeonCells index 0 valid"
-    - "DungeonCellLinks index 0 valid"
-    - "StartDebugRoomClass valid"
-    - "Only one room spawned"
-    - "SpawnedRooms.Num == 1"
-    - "SpawnedRooms[0] valid"
-    - "InitRoomFromCell called with DungeonCells[0]"
-    - "Start keeps one opening"
+    - "DungeonCells index 1 valid"
+    - "DungeonCellLinks index 1 valid"
+    - "DungeonCellLinks[1].bHasParent is true"
+    - "ParentCellIndex valid"
+    - "SpawnedRooms[ParentCellIndex] valid"
+    - "Child spawned only once"
+    - "InitRoomFromCell called only once with DungeonCells[1]"
+    - "ChildEntryDirection is opposite of DirectionFromParent"
+    - "ParentDoor and ChildDoor acquired through interface"
+    - "Child moved to align doors"
+    - "SpawnedRooms.Num equals 2"
+    - "SpawnedRooms[0] remains Start"
+    - "SpawnedRooms[1] corresponds to DungeonCells[1]"
 
 out_of_scope_now:
   - "Spawn all child rooms"
