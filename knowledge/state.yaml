@@ -34,10 +34,15 @@ current_phase:
     - "SpawnStartRoom created"
     - "SpawnStartRoom compiled and tested in isolation"
     - "SpawnedRooms index 0 validated as Start"
-  active: "Phase D - Spawn and align only ChildIndex 1"
-  next: "Create the controlled first-child placement flow using DungeonCellLinks[1]"
+    - "SpawnFirstChildRoom validation chain created"
+    - "ChildIndex 1 spawned and initialized once"
+    - "Parent and child DoorPoints acquired through BPI_DungeonRoomV2"
+    - "Child room moved without regenerating HISM"
+    - "First-child door alignment error validated as 0.0"
+  active: "Phase D - Add controlled corridor separation to ChildIndex 1"
+  next: "Create a pure direction-vector helper and offset the desired child door by a test corridor length"
   blocked_on:
-    - "Blueprint construction and screenshots for the first-child flow"
+    - "Confirm a suitable initial corridor-length value from the current room/tile scale"
 
 validated_room_counts:
   - 10
@@ -54,6 +59,10 @@ validated_invariants:
   parent_before_child: true
   start_connection_count: 1
   spawned_rooms_zero_is_start: true
+  first_child_uses_parent_link: true
+  first_child_entry_is_opposite_parent_direction: true
+  first_child_moves_same_actor_reference: true
+  first_child_door_alignment_error: 0.0
 
 spawn_start_room:
   status: "confirmed"
@@ -89,6 +98,43 @@ spawn_start_room:
     - "Validate SpawnActor Return Value before InitRoomFromCell or Add"
     - "Call InitRoomFromCell only once"
     - "Keep Start as SpawnedRooms[0]"
+
+first_child_placement:
+  status: "alignment_confirmed_corridor_offset_pending"
+  function: "SpawnFirstChildRoom"
+  child_index: 1
+  validations:
+    dungeon_cells_index_1_valid: true
+    dungeon_cell_links_index_1_valid: true
+    has_parent: true
+    parent_cell_index_valid_in_spawned_rooms: true
+    parent_actor_valid: true
+    child_actor_valid: true
+  direction_logic:
+    parent_direction_source: "DungeonCellLinks[1].DirectionFromParent"
+    child_entry_direction: "GetOppositeDirection(DirectionFromParent)"
+    get_opposite_direction_pure: true
+  spawn:
+    class_source: "RoomType switch: Normal, Key or Boss class"
+    temporary_location: "BP_DungeonGenerator_V2.GetActorLocation"
+    collision_handling: "Always Spawn, Ignore Collisions"
+    initialized_with: "DungeonCells[1]"
+    initialization_count: 1
+  alignment:
+    parent_door: "GetDoorWorldLocation(ParentRoomActor, DirectionFromParent)"
+    child_door: "GetDoorWorldLocation(ChildRoomActor, ChildEntryDirection)"
+    move_delta: "ParentDoorLocation - ChildDoorLocation"
+    new_location: "ChildRoomActor.GetActorLocation + MoveDelta"
+    movement: "SetActorLocation on the same child actor"
+    measured_error_after_move: 0.0
+  array_result:
+    child_added_to: "SpawnedRooms"
+    expected_index: 1
+  remaining_before_phase_close:
+    - "Confirm SpawnedRooms.Num == 2 with a dedicated print or debugger inspection"
+    - "Add a controlled corridor gap"
+    - "Retest alignment using DesiredChildDoor instead of the exact ParentDoor"
+    - "Test more than one DirectionFromParent direction"
 
 approved_v1_room_count:
   status: "conceptual_not_implemented"
@@ -146,6 +192,10 @@ current_debug:
   links_detail_print:
     enabled: false
     preserved: true
+  first_child_alignment_distance:
+    enabled: true
+    result: 0.0
+    temporary: true
 
 memory_policy:
   repository_is_official_memory: true
@@ -166,21 +216,16 @@ memory_policy:
   do_not_wait_for_chat_memory: true
 
 next_acceptance_criteria:
-  function_or_flow: "First child placement, ChildIndex 1"
+  function_or_flow: "First child corridor separation, ChildIndex 1"
   checks:
-    - "DungeonCells index 1 valid"
-    - "DungeonCellLinks index 1 valid"
-    - "DungeonCellLinks[1].bHasParent is true"
-    - "ParentCellIndex valid"
-    - "SpawnedRooms[ParentCellIndex] valid"
-    - "Child spawned only once"
-    - "InitRoomFromCell called only once with DungeonCells[1]"
-    - "ChildEntryDirection is opposite of DirectionFromParent"
-    - "ParentDoor and ChildDoor acquired through interface"
-    - "Child moved to align doors"
+    - "Direction vector matches DirectionFromParent"
+    - "DesiredChildDoor equals ParentDoor plus DirectionVector times CorridorLength"
+    - "Child is moved using the same actor reference"
+    - "Door distance after movement equals the chosen CorridorLength"
     - "SpawnedRooms.Num equals 2"
     - "SpawnedRooms[0] remains Start"
     - "SpawnedRooms[1] corresponds to DungeonCells[1]"
+    - "Test at least two different parent directions"
 
 out_of_scope_now:
   - "Spawn all child rooms"
