@@ -2,6 +2,78 @@
 
 Todos los cambios técnicos importantes deben añadirse aquí y reflejarse también en `docs/00_ESTADO_ACTUAL.md`.
 
+## 2026-07-21 — SpawnStartRoom completada
+
+### Añadido
+
+- Creada la función `SpawnStartRoom` dentro de `BP_DungeonGenerator_V2`.
+- Añadida validación de `DungeonCells[0]`.
+- Añadida comprobación de que `DungeonCells[0].RoomType == Start`.
+- Añadida validación del `Return Value` de `SpawnActor`.
+- Añadidos prints de diagnóstico para índice inválido, tipo incorrecto y fallo de spawn.
+- Añadido documento técnico `docs/18_SPAWN_START_ROOM.md`.
+
+### Implementación confirmada
+
+```text
+GetActorLocation del generador
+→ Make Transform
+→ SpawnActor con Start Room Class
+→ Is Valid
+→ InitRoomFromCell(DungeonCells[0])
+→ Add SpawnedRooms
+```
+
+### Corregido durante el montaje
+
+```text
+Scale Z = 0
+→ Scale Z = 1
+```
+
+También se corrigió el mensaje del error de spawn para distinguirlo del error `DungeonCells[0] is not Start`.
+
+### Validado
+
+```text
+✅ Compila.
+✅ Solo aparece Start.
+✅ SpawnedRooms.Num == 1.
+✅ SpawnedRooms[0] es válido.
+✅ La Start nace en GetActorLocation del generador.
+✅ InitRoomFromCell se ejecuta con DungeonCells[0].
+✅ Start conserva una única apertura.
+✅ No aparecen hijas durante la prueba aislada.
+```
+
+### Decisión de diseño
+
+Aprobado conceptualmente para V1:
+
+```text
+15 habitaciones normales/procedurales
++ 1 Start
++ 1 Key
++ 1 Boss
+= 18 habitaciones físicas
+```
+
+La regla de conteo todavía no se implementa hasta estabilizar la colocación padre-hija.
+
+### Siguiente paso
+
+```text
+Fase D
+→ generar únicamente ChildIndex 1
+→ leer DungeonCellLinks[1]
+→ obtener su padre
+→ spawnear e inicializar una sola hija
+→ alinear DoorPoint de padre e hija
+→ comprobar SpawnedRooms.Num == 2
+```
+
+---
+
 ## 2026-07-20 — Cierre de sesión y memoria permanente
 
 ### Confirmado
