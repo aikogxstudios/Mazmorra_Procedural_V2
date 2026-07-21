@@ -51,16 +51,30 @@ ParentCellIndex < ChildIndex.
 
 El debug temporal de cantidades y links se conserva, pero queda desactivado hasta necesitarlo.
 
+### SpawnStartRoom
+
+```text
+✅ Creada y compilada.
+✅ Probada aisladamente.
+✅ Solo genera DungeonCells[0].
+✅ Usa la clase Start.
+✅ Nace desde GetActorLocation del generador.
+✅ InitRoomFromCell(DungeonCells[0]).
+✅ SpawnedRooms.Num == 1.
+✅ SpawnedRooms[0] es Start y es válido.
+```
+
 ### Próximo paso exacto
 
 ```text
-Crear SpawnStartRoom
-→ spawnear solo DungeonCells[0]
-→ usar StartDebugRoomClass
-→ colocar Start en el origen
-→ InitRoomFromCell
-→ añadirla como SpawnedRooms[0]
-→ validar correspondencia de índices
+Fase D — una sola hija
+→ usar ChildIndex 1
+→ leer DungeonCellLinks[1]
+→ obtener ParentCellIndex y DirectionFromParent
+→ spawnear e inicializar una única hija
+→ alinear ParentDoor y ChildDoor
+→ guardar como SpawnedRooms[1]
+→ validar SpawnedRooms.Num == 2
 ```
 
 Todavía no se debe colocar toda la mazmorra padre-hija de una vez.
@@ -95,6 +109,7 @@ Todavía no se debe colocar toda la mazmorra padre-hija de una vez.
 | [`docs/23_SEEDS_Y_REPRODUCIBILIDAD.md`](docs/23_SEEDS_Y_REPRODUCIBILIDAD.md) | RandomStream, RoomSeed y determinismo |
 | [`docs/24_GLOSARIO.md`](docs/24_GLOSARIO.md) | Glosario técnico del sistema |
 | [`docs/25_DIAGRAMAS_DE_FLUJO.md`](docs/25_DIAGRAMAS_DE_FLUJO.md) | Diagramas ASCII de los flujos principales |
+| [`docs/26_SPAWN_START_ROOM.md`](docs/26_SPAWN_START_ROOM.md) | Implementación confirmada y pruebas de SpawnStartRoom |
 | [`knowledge/README.md`](knowledge/README.md) | Guía de la base machine-readable |
 | [`knowledge/state.yaml`](knowledge/state.yaml) | Estado actual estructurado |
 | [`knowledge/assets.yaml`](knowledge/assets.yaml) | Inventario estructurado de assets |
@@ -107,7 +122,13 @@ Todavía no se debe colocar toda la mazmorra padre-hija de una vez.
 
 ## Seguimiento
 
-La siguiente fase está registrada en la Issue **#1 — SpawnStartRoom**.
+```text
+Issue #1 — SpawnStartRoom
+→ completada
+
+Siguiente issue
+→ primera hija padre-hija
+```
 
 Hay plantillas de issues para:
 
