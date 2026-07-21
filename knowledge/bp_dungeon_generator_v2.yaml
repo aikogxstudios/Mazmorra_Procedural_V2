@@ -11,7 +11,7 @@ functions:
   - name: "GenerateDungeon"
     status: "confirmed"
     responsibility: "Coordinate the full dungeon generation flow under authority."
-    calls:
+    stable_flow_before_parent_child_refactor:
       - "ResetDungeon"
       - "InitRandomStream"
       - "CreateStartCell"
@@ -22,6 +22,7 @@ functions:
       - "SpawnBossRoomDoors"
       - "DebugDrawDoorPoints"
       - "DebugDrawDoorToDoorConnections"
+    current_refactor_state: "SpawnStartRoom tested in isolation; full child integration pending"
 
   - name: "ResetDungeon"
     status: "protected"
@@ -99,17 +100,62 @@ functions:
     responsibility: "Call TryAddRandomCell until MaxRooms or MaxGenerationAttempts."
 
   - name: "SpawnRoomsFromCells"
-    status: "pending_replacement"
+    status: "legacy_grid_spawn_pending_replacement"
     responsibility: "Spawn all rooms using Grid*CellSize."
     known_flow:
       - "ForEach DungeonCells"
+      - "Break ST_DungeonCell"
       - "GridX * CellSize"
       - "GridY * CellSize"
-      - "Select class by RoomType"
+      - "Make Vector"
+      - "Make Transform"
+      - "Switch on E_DungeonRoomType"
+      - "Set Selected Room Class"
       - "SpawnActor"
       - "InitRoomFromCell"
       - "Add SpawnedRooms"
-    exact_graph_visible: false
+    room_classes:
+      Start: "Start room class visible in switch branch"
+      Normal: "DebugRoomClass"
+      Key: "KeyDebugRoomClass"
+      Boss: "BossDebugRoomClass"
+    collision_handling: "Default"
+    exact_graph_visible: true
+
+  - name: "SpawnStartRoom"
+    status: "confirmed"
+    responsibility: "Spawn, initialize and store only DungeonCells[0] as SpawnedRooms[0]."
+    inputs: []
+    outputs: []
+    validations:
+      - "DungeonCells.IsValidIndex(0)"
+      - "DungeonCells[0].RoomType == Start"
+      - "SpawnActor Return Value is valid"
+    transform:
+      location: "BP_DungeonGenerator_V2.GetActorLocation"
+      rotation: [0, 0, 0]
+      scale: [1, 1, 1]
+    class: "Start Room Class / StartDebugRoomClass"
+    collision_handling: "Default"
+    initialization:
+      target: "SpawnActor Return Value"
+      cell_data: "DungeonCells[0]"
+      interface_call: "Init Room from Cell"
+    writes:
+      - "SpawnedRooms"
+    expected_result:
+      spawned_rooms_num: 1
+      stored_index: 0
+    test_status:
+      compiles: true
+      isolated_test_passed: true
+      only_start_spawned: true
+      start_one_opening: true
+    protected_rules:
+      - "Scale Z must be 1"
+      - "Validate actor before InitRoomFromCell and Add"
+      - "InitRoomFromCell only once"
+      - "Start remains SpawnedRooms[0]"
 
   - name: "GetOppositeDirection"
     status: "protected"
@@ -171,11 +217,9 @@ functions:
     responsibility: "Get room DoorWorldLocation, select yaw, spawn BossDoorClass, store reference."
 
 future_functions:
-  - name: "SpawnStartRoom"
-    status: "next"
-  - name: "SpawnRemainingRoomsFromParents"
-    status: "future"
   - name: "PlaceChildRoomFromParent"
+    status: "next_phase"
+  - name: "SpawnRemainingRoomsFromParents"
     status: "future"
   - name: "DoesRoomOverlapPlacedRooms"
     status: "future"
