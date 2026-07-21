@@ -22,7 +22,15 @@ functions:
       - "SpawnBossRoomDoors"
       - "DebugDrawDoorPoints"
       - "DebugDrawDoorToDoorConnections"
-    current_refactor_state: "SpawnStartRoom tested in isolation; full child integration pending"
+    current_temporary_refactor_flow:
+      - "ResetDungeon"
+      - "InitRandomStream"
+      - "CreateStartCell"
+      - "BuildDungeonLayout"
+      - "ChooseKeyAndBossCells"
+      - "SpawnStartRoom"
+      - "SpawnFirstChildRoom"
+    current_refactor_state: "Start and ChildIndex 1 are spawned; exact DoorPoint alignment validated; corridor offset pending"
 
   - name: "ResetDungeon"
     status: "protected"
@@ -157,13 +165,75 @@ functions:
       - "InitRoomFromCell only once"
       - "Start remains SpawnedRooms[0]"
 
+  - name: "SpawnFirstChildRoom"
+    status: "confirmed_exact_alignment"
+    responsibility: "Spawn and align only DungeonCells[1] using DungeonCellLinks[1] and its already-spawned parent."
+    inputs: []
+    outputs: []
+    child_index: 1
+    validations:
+      - "DungeonCells.IsValidIndex(1)"
+      - "DungeonCellLinks.IsValidIndex(1)"
+      - "DungeonCellLinks[1].bHasParent == true"
+      - "SpawnedRooms.IsValidIndex(ParentCellIndex)"
+      - "Parent room actor valid"
+      - "Child room actor valid"
+    locals:
+      Parent_Room_Actor: "Actor Object Reference, not array"
+      Child_Room_Actor: "Actor Object Reference, not array"
+      Child_Entry_Direction: "E_DungeonDirection"
+      Parent_Door_Location: "Vector"
+      Child_Door_Location: "Vector"
+    parent_source: "SpawnedRooms[DungeonCellLinks[1].ParentCellIndex]"
+    child_class_source: "Switch DungeonCells[1].RoomType: Normal, Key or Boss"
+    child_spawn:
+      temporary_location: "BP_DungeonGenerator_V2.GetActorLocation"
+      collision_handling: "Always Spawn, Ignore Collisions"
+      initialization: "InitRoomFromCell(DungeonCells[1]) exactly once"
+    direction_logic:
+      parent_direction: "DungeonCellLinks[1].DirectionFromParent"
+      child_entry_direction: "GetOppositeDirection(DirectionFromParent)"
+    door_queries:
+      parent: "GetDoorWorldLocation(ParentRoomActor, DirectionFromParent)"
+      child: "GetDoorWorldLocation(ChildRoomActor, ChildEntryDirection)"
+    exact_alignment:
+      move_delta: "ParentDoorLocation - ChildDoorLocation"
+      new_location: "ChildRoomActor.GetActorLocation + MoveDelta"
+      movement: "SetActorLocation on same ChildRoomActor reference"
+      measured_door_error: 0.0
+    array_result:
+      target: "SpawnedRooms"
+      stored_index: 1
+      validated_num: 2
+    corrected_measurement_bug:
+      incorrect_result: 2950
+      cause: "Child door was compared against actor location/center"
+      correct_measurement: "Distance(ChildDoorAfterMove, ParentDoorLocation)"
+
   - name: "GetOppositeDirection"
     status: "protected"
+    pure: true
     mapping:
       North: "South"
       East: "West"
       South: "North"
       West: "East"
+
+  - name: "GetDirectionVector"
+    status: "created_mapping_confirmed_pure_pending"
+    responsibility: "Convert E_DungeonDirection to a unit world-space XY vector."
+    inputs:
+      Direction: "E_DungeonDirection"
+    outputs:
+      Direction_Vector: "Vector"
+    implementation: "Select indexed by Direction"
+    mapping:
+      North: [0, 1, 0]
+      East: [1, 0, 0]
+      South: [0, -1, 0]
+      West: [-1, 0, 0]
+    pure_confirmed: false
+    note: "Final screenshot still shows execution pins"
 
   - name: "SetConnectionOnCell"
     status: "protected"
@@ -218,12 +288,14 @@ functions:
 
 future_functions:
   - name: "PlaceChildRoomFromParent"
-    status: "next_phase"
+    status: "future_after_single_child_prototype"
   - name: "SpawnRemainingRoomsFromParents"
     status: "future"
   - name: "DoesRoomOverlapPlacedRooms"
     status: "future"
-  - name: "GetDirectionVector"
-    status: "future"
   - name: "ValidateDungeonData"
     status: "future_optional"
+
+next_formula:
+  desired_child_door: "ParentDoorLocation + GetDirectionVector(DirectionFromParent) * CorridorLength"
+  move_delta: "DesiredChildDoor - ChildDoorLocation"
