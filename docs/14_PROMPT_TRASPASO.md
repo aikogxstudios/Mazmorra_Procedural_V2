@@ -18,6 +18,8 @@ docs/09_COLOCACION_PADRE_HIJA.md
 docs/10_PRUEBAS_Y_REGRESION.md
 docs/13_ROADMAP.md
 docs/26_SPAWN_START_ROOM.md
+docs/27_SPAWN_FIRST_CHILD_ROOM.md
+sessions/2026-07-21_CIERRE_SESION.md
 
 Consulta el resto del repositorio cuando la tarea toque ese sistema.
 
@@ -38,7 +40,7 @@ Distingue siempre:
 Regla de colaboración:
 Si una función o gráfico no está visible o documentado nodo por nodo, pide una captura antes de proponer cables, nodos, pins o nombres. No inventes estructura visual.
 
-Estado confirmado:
+ESTADO LÓGICO CONFIRMADO
 - ST_DungeonCellLink existe.
 - DungeonCellLinks existe.
 - CreateStartCell añade link 0 con ParentCellIndex=-1, DirectionFromParent=North y bHasParent=false.
@@ -48,10 +50,10 @@ Estado confirmado:
   bHasParent=true
 - DungeonCells.Num == DungeonCellLinks.Num se validó con 10, 15, 20, 50 y 150 habitaciones.
 - ParentCellIndex es válido y menor que ChildIndex.
-- Start ya está limitada a una salida.
+- Start está limitada a una salida.
 - El debug de cantidades/links queda desactivado pero conservado.
 
-La condición de Start dentro de TryAddRandomCell es:
+La condición de Start en TryAddRandomCell es:
 Random Cell Index == 0
 AND
 SelectedCell.bNorth OR bEast OR bSouth OR bWest
@@ -59,7 +61,8 @@ SelectedCell.bNorth OR bEast OR bSouth OR bWest
 True → Return Added=false
 False → continuar generación.
 
-SpawnRoomsFromCells fue revisada completamente mediante capturas. Su flujo antiguo es:
+SPAWN ANTIGUO
+SpawnRoomsFromCells fue revisada mediante capturas. Su flujo antiguo es:
 ForEach DungeonCells
 → Break ST_DungeonCell
 → GridX/GridY * CellSize
@@ -70,37 +73,110 @@ ForEach DungeonCells
 → InitRoomFromCell
 → Add SpawnedRooms
 
-SpawnStartRoom ya está creada, compilada y probada aisladamente.
+Este sistema permanece como referencia y está temporalmente desconectado durante el refactor padre-hija.
 
-Flujo confirmado de SpawnStartRoom:
-- validar DungeonCells index 0;
-- comprobar RoomType == Start;
-- GetActorLocation del BP_DungeonGenerator_V2;
+SPAWN START CONFIRMADO
+SpawnStartRoom está creada, compilada y probada:
+- valida DungeonCells[0];
+- comprueba RoomType == Start;
+- usa GetActorLocation del generador;
 - MakeTransform con Rotation 0 y Scale 1,1,1;
-- SpawnActor usando Start Room Class / StartDebugRoomClass;
-- validar Return Value;
+- SpawnActor con Start Room Class / StartDebugRoomClass;
+- valida Return Value;
 - InitRoomFromCell(DungeonCells[0]);
-- Add a SpawnedRooms.
+- Add SpawnedRooms.
 
-Resultado confirmado:
+Resultado:
 - solo aparece Start;
 - SpawnedRooms.Num == 1;
 - SpawnedRooms[0] es válido;
-- Start conserva una sola apertura;
-- no aparecen hijas durante la prueba aislada.
+- Start conserva una sola apertura.
 
-Correcciones que no deben perderse:
-- Scale Z debe ser 1, no 0.
-- El error de SpawnActor debe decir Failed to spawn Start Room, no DungeonCells[0] is not Start.
-- No añadir un actor a SpawnedRooms sin validar el Return Value.
-- InitRoomFromCell se ejecuta una sola vez.
+PRIMERA HIJA CONFIRMADA
+SpawnFirstChildRoom está creada y probada únicamente con ChildIndex = 1.
 
-Blueprints:
-- BP_RoomMaster es el original y no se ha tocado.
-- BP_RoomMaster_Dungeon es el duplicado integrado.
+Validaciones:
+- DungeonCells[1] válido;
+- DungeonCellLinks[1] válido;
+- bHasParent=true;
+- ParentCellIndex válido;
+- SpawnedRooms[ParentCellIndex] válido;
+- Actor padre válido;
+- Actor hija válido.
 
-Mappings que no se deben cambiar:
+Variables locales:
+- Parent Room Actor : Actor Object Reference, no array;
+- Child Room Actor : Actor Object Reference, no array;
+- Child Entry Direction : E_DungeonDirection;
+- Parent Door Location : Vector;
+- Child Door Location : Vector.
 
+Direcciones:
+DirectionFromParent
+→ GetOppositeDirection
+→ ChildEntryDirection
+
+GetOppositeDirection se cambió a Pure.
+
+Clase de la hija:
+- Normal → clase Normal/procedural;
+- Key → Key Debug Room Class;
+- Boss → Boss Debug Room Class;
+- Start → error y Return.
+
+Spawn de hija:
+- nace temporalmente en GetActorLocation del generador;
+- Collision Handling = Always Spawn, Ignore Collisions;
+- SpawnActor Return Value validado;
+- InitRoomFromCell(DungeonCells[1]) una sola vez.
+
+DoorPoints:
+ParentDoor = ParentRoomActor.GetDoorWorldLocation(DirectionFromParent)
+ChildDoor = ChildRoomActor.GetDoorWorldLocation(ChildEntryDirection)
+
+Movimiento validado sin separación de pasillo:
+MoveDelta = ParentDoorLocation - ChildDoorLocation
+NewChildLocation = ChildRoomActor.GetActorLocation + MoveDelta
+SetActorLocation sobre la misma referencia
+Add Child Room Actor a SpawnedRooms
+
+Resultado confirmado:
+- SpawnedRooms.Num == 2;
+- SpawnedRooms[0] = Start;
+- SpawnedRooms[1] = primera hija;
+- la hija se mueve y no se regenera;
+- distancia entre DoorPoints después de mover = 0.0.
+
+Error histórico de esta prueba:
+La primera medición mostró 2950 porque comparaba ChildDoorWorldLocation contra la ubicación/centro del actor. La medición correcta compara ChildDoorWorldLocation después del movimiento contra ParentDoorLocation.
+
+GET DIRECTION VECTOR
+GetDirectionVector está creada con:
+Input: Direction : E_DungeonDirection
+Output: Direction Vector : Vector
+
+Mapping:
+North → (0,1,0)
+East → (1,0,0)
+South → (0,-1,0)
+West → (-1,0,0)
+
+El mapping está confirmado. La captura final todavía muestra pines de ejecución, por lo que Pure no debe darse por confirmado. Al retomar, revisar la propiedad Pure y activarla si sigue desmarcada.
+
+FLUJO TEMPORAL DE GENERATE DUNGEON
+GenerateDungeon
+→ Switch Has Authority
+→ ResetDungeon
+→ InitRandomStream
+→ CreateStartCell
+→ BuildDungeonLayout
+→ ChooseKeyAndBossCells
+→ SpawnStartRoom
+→ SpawnFirstChildRoom
+
+No conectar todavía el spawn antiguo, pasillos, Boss Door ni debug físico completo.
+
+MAPPINGS QUE NO SE DEBEN CAMBIAR
 InitRoomFromCell:
 Cell North → SouthOpening
 Cell East → WestOpening
@@ -115,41 +191,44 @@ Dungeon West → Arrow_Exit_West
 
 SpawnCorridorsFromConnections está validado y procesa solo North/East para evitar duplicados. No tocar.
 
-Visión V1:
-- Start preconstruida, cualquier tamaño y una sola salida.
+BLUEPRINTS
+- BP_RoomMaster es el original y no se ha tocado.
+- BP_RoomMaster_Dungeon es el duplicado integrado.
+
+VISIÓN V1
+- Start preconstruida, cualquier tamaño y una salida.
 - 15 habitaciones normales/procedurales.
 - 1 Key y 1 Boss aparte de las 15 normales.
 - Total físico previsto: 18 habitaciones incluyendo Start.
-- La regla de cantidad está aprobada conceptualmente, pero no implementada todavía.
-- Normal y Key procedurales o preconstruidas.
-- Boss preconstruida, terminal y con una entrada.
+- La regla de cantidad está aprobada conceptualmente, no implementada todavía.
 - Pasillos siempre presentes y de longitud variable.
-- La colocación física será padre-hija mediante DoorPoints y RoomBounds.
-- Si una hija choca, se alarga el pasillo y se mueve la misma hija.
+- Colocación padre-hija mediante DoorPoints y RoomBounds.
+- Si una hija choca, alargar el pasillo y mover la misma hija.
 - No regenerar HISM por cada intento.
 
-Punto exacto de continuación:
-Fase D — generar y alinear únicamente ChildIndex 1.
-
-Objetivo:
-- validar DungeonCells[1];
-- validar DungeonCellLinks[1];
-- comprobar bHasParent=true;
-- leer ParentCellIndex y DirectionFromParent;
-- validar SpawnedRooms[ParentCellIndex];
-- spawnear una sola hija;
-- ejecutar InitRoomFromCell(DungeonCells[1]) una sola vez;
-- ChildEntryDirection = GetOppositeDirection(DirectionFromParent);
-- obtener ParentDoor y ChildDoor por interfaz;
-- mover la hija para alinear las puertas;
-- añadirla como SpawnedRooms[1];
-- probar SpawnedRooms.Num == 2.
+PUNTO EXACTO DE CONTINUACIÓN
+1. Abrir GetDirectionVector y confirmar/activar Pure.
+2. Definir un CorridorLength temporal de prueba.
+3. Calcular:
+   DirectionVector = GetDirectionVector(DirectionFromParent)
+   DesiredChildDoor = ParentDoorLocation + DirectionVector * CorridorLength
+4. Sustituir únicamente:
+   MoveDelta = ParentDoorLocation - ChildDoorLocation
+   por:
+   MoveDelta = DesiredChildDoor - ChildDoorLocation
+5. Mantener:
+   NewChildLocation = ChildRoomActor.GetActorLocation + MoveDelta
+   SetActorLocation sobre la misma hija.
+6. Medir:
+   Distance(ParentDoor, ChildDoorAfterMove) == CorridorLength
+7. Confirmar SpawnedRooms.Num == 2.
+8. Probar al menos dos direcciones diferentes.
 
 No crear todavía:
 - loop de todas las hijas;
 - bounds globales;
 - reintentos por solapamiento;
-- pasillos variables;
+- pasillos variables completos;
 - nuevas RoomTypes.
 
 Explica cada cambio Blueprint nodo por nodo, usando nombres reales de las capturas, y prueba una sola fase antes de avanzar.
@@ -171,4 +250,5 @@ Errores/decisiones → docs/11_ERRORES_Y_DECISIONES.md
 Debug → docs/12_FUNCIONES_DEBUG.md
 Roadmap → docs/13_ROADMAP.md
 SpawnStartRoom → docs/26_SPAWN_START_ROOM.md
+Primera hija → docs/27_SPAWN_FIRST_CHILD_ROOM.md
 ```
