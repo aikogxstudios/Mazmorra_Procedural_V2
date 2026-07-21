@@ -4,6 +4,13 @@
 
 `BP_DungeonGenerator_V2` controla el grafo lógico, la selección de salas especiales y la generación física de la mazmorra.
 
+Este documento conserva el estado funcional actual del generador. Los detalles específicos de las nuevas funciones están ampliados en:
+
+```text
+docs/26_SPAWN_START_ROOM.md
+docs/27_SPAWN_FIRST_CHILD_ROOM.md
+```
+
 ## Componentes
 
 Confirmado por captura:
@@ -12,42 +19,46 @@ Confirmado por captura:
 Scene
 ```
 
-No se ha documentado una jerarquía especial adicional. Si aparece un nuevo componente, actualizar este archivo.
+## Funciones confirmadas
 
-## Funciones reales confirmadas
-
-El panel `My Blueprint` muestra 20 funciones propias, más `ConstructionScript`:
+Funciones originales:
 
 ```text
-1. GenerateDungeon
-2. ResetDungeon
-3. InitRandomStream
-4. CreateStartCell
-5. IsCellOccupied
-6. GetNeighborCoord
-7. TryAddRandomCell
-8. BuildDungeonLayout
-9. SpawnRoomsFromCells
-10. GetOppositeDirection
-11. SetConnectionOnCell
-12. DebugPrintLayout
-13. DebugDrawConnections
-14. DebugDrawDoorPoints
-15. FindCellIndexByCoord
-16. DebugDrawDoorToDoorConnections
-17. SpawnCorridorsFromConnections
-18. ChooseKeyAndBossCells
-19. SpawnBossRoomDoors
-20. SpawnDoorAtRoomDirection
+GenerateDungeon
+ResetDungeon
+InitRandomStream
+CreateStartCell
+IsCellOccupied
+GetNeighborCoord
+TryAddRandomCell
+BuildDungeonLayout
+SpawnRoomsFromCells
+GetOppositeDirection
+SetConnectionOnCell
+DebugPrintLayout
+DebugDrawConnections
+DebugDrawDoorPoints
+FindCellIndexByCoord
+DebugDrawDoorToDoorConnections
+SpawnCorridorsFromConnections
+ChooseKeyAndBossCells
+SpawnBossRoomDoors
+SpawnDoorAtRoomDirection
 ```
 
-Además:
+Funciones creadas durante el refactor padre-hija:
+
+```text
+SpawnStartRoom
+SpawnFirstChildRoom
+GetDirectionVector
+```
+
+Además existe:
 
 ```text
 ConstructionScript
 ```
-
-El contador de “overridable” de Unreal no equivale al número de funciones propias.
 
 ## Variables miembro confirmadas
 
@@ -88,6 +99,7 @@ BossCellIndex : Integer
 BossGridX : Integer
 BossGridY : Integer
 BossDebugRoomClass : Actor Class Reference
+BestBossDistance : Integer
 ```
 
 ### Key Room
@@ -97,7 +109,10 @@ KeyCellIndex : Integer
 KeyGridX : Integer
 KeyGridY : Integer
 KeyDebugRoomClass : Actor Class Reference
+BestKeyDistance : Integer
 ```
+
+`BestKeyDistance` funciona realmente como mejor `KeyScore`.
 
 ### Puertas y links
 
@@ -107,28 +122,13 @@ SpawnedDungeonDoors : Array Actor Reference
 DungeonCellLinks : Array ST_DungeonCellLink
 ```
 
-### Variables documentadas pero no visibles en la captura principal de variables
-
-```text
-BestBossDistance : Integer
-BestKeyDistance : Integer
-```
-
-`BestKeyDistance` funciona realmente como mejor `KeyScore`. Un renombrado futuro puede mejorar claridad, pero no es necesario ahora.
-
 ## GenerateDungeon
 
-### Estado
-
-✅ Flujo real confirmado por captura.
-
-### Flujo
+### Flujo estable anterior
 
 ```text
 GenerateDungeon
 → Switch Has Authority
-   Authority → continuar
-   Remote → no generar
 → ResetDungeon
 → InitRandomStream
 → CreateStartCell
@@ -141,27 +141,32 @@ GenerateDungeon
 → DebugDrawDoorToDoorConnections
 ```
 
-La autoridad evita que clientes remotos ejecuten una segunda generación.
-
-### Futuro
-
-`SpawnRoomsFromCells` será dividido o sustituido por:
+### Flujo temporal actual durante el refactor
 
 ```text
-SpawnStartRoom
-SpawnRemainingRoomsFromParents
+GenerateDungeon
+→ Switch Has Authority
+→ ResetDungeon
+→ InitRandomStream
+→ CreateStartCell
+→ BuildDungeonLayout
+→ ChooseKeyAndBossCells
+→ SpawnStartRoom
+→ SpawnFirstChildRoom
 ```
 
-No cambiar el flujo completo hasta probar primero `SpawnStartRoom` de forma aislada.
+El sistema antiguo físico permanece desconectado temporalmente, no eliminado.
 
 ## ResetDungeon
 
 ### Estado
 
-✅ Estable.  
-🛑 Modificar solo para limpiar nuevos arrays o actores.
+```text
+✅ Estable
+🛑 Modificar solo para limpiar nuevos arrays o actores
+```
 
-### Responsabilidad
+Responsabilidad:
 
 ```text
 Destruir puertas
@@ -172,65 +177,37 @@ Destruir puertas
 → resetear índices y scores
 ```
 
-### Orden recomendado
+Orden documentado:
 
 ```text
-ForEach SpawnedDungeonDoors
-→ IsValid
-→ DestroyActor
-→ Clear SpawnedDungeonDoors
-
-ForEach SpawnedCorridors
-→ IsValid
-→ DestroyActor
-→ Clear SpawnedCorridors
-
-ForEach SpawnedRooms
-→ IsValid
-→ DestroyActor
-→ Clear SpawnedRooms
-
+ForEach SpawnedDungeonDoors → DestroyActor → Clear
+ForEach SpawnedCorridors → DestroyActor → Clear
+ForEach SpawnedRooms → DestroyActor → Clear
 Clear DungeonCells
 Clear DungeonCellLinks
-
 BossCellIndex = -1
 KeyCellIndex = -1
 BestBossDistance = -1
 BestKeyDistance = -1
 ```
 
-Riesgo histórico:
-
-```text
-No limpiar SpawnedDungeonDoors
-→ puertas antiguas o duplicadas al regenerar.
-```
-
 ## InitRandomStream
 
 ### Estado
 
-✅ Responsabilidad confirmada.  
-🟡 Nodos exactos no documentados completamente.  
-🛑 No tocar ahora.
-
-### Responsabilidad
+```text
+✅ Responsabilidad confirmada
+🟡 Nodos exactos no documentados completamente
+🛑 No tocar ahora
+```
 
 ```text
-Elegir DungeonSeed o una seed aleatoria según bUseRandomSeed
+Elegir DungeonSeed o seed aleatoria según bUseRandomSeed
 → Initialize Random Stream
 → guardar RandomStream
 ```
 
-Objetivo: reproducibilidad.
-
 ## CreateStartCell
-
-### Estado
-
-✅ Completo.
-
-### Flujo lógico
 
 ```text
 Make ST_DungeonCell
@@ -242,9 +219,11 @@ bEast = false
 bSouth = false
 bWest = false
 RoomID = 0
-RoomSeed = valor actual del sistema
+RoomSeed = valor actual
 → Add DungeonCells
+```
 
+```text
 Make ST_DungeonCellLink
 ParentCellIndex = -1
 DirectionFromParent = North
@@ -259,15 +238,7 @@ DungeonCells.Num = 1
 DungeonCellLinks.Num = 1
 ```
 
-La regla de una sola salida de Start no se implementa aquí; se aplica al seleccionar padres en `TryAddRandomCell`.
-
 ## BuildDungeonLayout
-
-### Estado
-
-✅ Estable.
-
-### Responsabilidad
 
 ```text
 Llamar repetidamente a TryAddRandomCell
@@ -275,35 +246,19 @@ hasta alcanzar MaxRooms
 o MaxGenerationAttempts
 ```
 
-No debe spawnear actores.
-
-### Invariantes
+Pruebas alcanzadas:
 
 ```text
-DungeonCells.Num <= MaxRooms
-Intentos limitados
-Sin loops infinitos
+10
+15
+20
+50
+150 habitaciones
 ```
-
-Las pruebas actuales alcanzaron correctamente 10, 15, 20, 50 y 150 salas.
 
 ## TryAddRandomCell
 
-### Estado
-
-✅ Núcleo funcional.  
-✅ DungeonCellLinks terminado.  
-✅ Start limitada a una salida.  
-✅ Validado hasta 150 salas.
-
-### Entrada/salida
-
-```text
-Exec In
-→ Added : Boolean
-```
-
-### Variables locales reales
+### Variables locales
 
 ```text
 Random Cell Index
@@ -319,181 +274,54 @@ Opposite Direction
 New Connected Cell
 ```
 
-### Flujo completo confirmado por capturas
-
-#### 1. Array vacío
+### Flujo resumido confirmado
 
 ```text
-DungeonCells Length <= 0
-→ Branch
-   True → Return Added=false
-   False → continuar
+validar DungeonCells no vacío
+→ elegir Random Cell Index
+→ obtener Selected Cell
+→ impedir segunda salida de Start
+→ elegir Selected Direction
+→ GetNeighborCoord
+→ IsCellOccupied
+→ generar RoomSeed
+→ SetConnectionOnCell del padre
+→ actualizar padre en DungeonCells
+→ crear New Base Cell Normal
+→ GetOppositeDirection
+→ conectar hija hacia padre
+→ Add DungeonCells
+→ Add DungeonCellLinks
+→ Return Added=true
 ```
 
-#### 2. Elegir padre
-
-```text
-Random Integer in Range from Stream
-Min = 0
-Max = DungeonCells.Length - 1
-→ Set Random Cell Index
-
-DungeonCells[Random Cell Index]
-→ Set Selected Cell
-```
-
-#### 3. Evitar segunda salida de Start
-
-Después de `Set Selected Cell`:
+Regla Start:
 
 ```text
 Random Cell Index == 0
 AND
-(
- SelectedCell.bNorth
- OR SelectedCell.bEast
- OR SelectedCell.bSouth
- OR SelectedCell.bWest
-)
-→ Branch
+Selected Cell tiene cualquier conexión
+→ Return Added=false
 ```
 
+Link de hija:
+
 ```text
-True → Return Added=false
-False → continuar
+ParentCellIndex = Random Cell Index
+DirectionFromParent = Selected Direction
+bHasParent = true
 ```
 
-Importante:
+Invariante:
 
 ```text
-El Return de la rama True debe tener Added desmarcado/false.
-El OR debe incluir las cuatro direcciones.
-```
-
-#### 4. Elegir dirección
-
-```text
-Random Integer in Range from Stream
-Min = 0
-Max = 3
-→ Set Random Direction Index
-
-Select E_DungeonDirection
-0 = North
-1 = East
-2 = South
-3 = West
-→ Set Selected Direction
-```
-
-#### 5. Calcular coordenada vecina
-
-```text
-Break Selected Cell
-→ GetNeighborCoord
-   In Grid X = SelectedCell.GridX
-   In Grid Y = SelectedCell.GridY
-   Direction = Selected Direction
-→ Set Neighbor X
-→ Set Neighbor Y
-```
-
-#### 6. Comprobar ocupación
-
-```text
-IsCellOccupied(Neighbor X, Neighbor Y)
-→ Branch
-   True → Return Added=false
-   False → continuar
-```
-
-#### 7. Generar seed
-
-```text
-Random Integer in Range from Stream
-Min = 1
-Max = 999999
-→ Set New Room Seed
-```
-
-#### 8. Conectar el padre
-
-```text
-SetConnectionOnCell
-In Cell = Selected Cell
-Direction = Selected Direction
-→ Out Cell
-→ Set Updated Selected Cell
-
-Set Array Elem
-Target Array = DungeonCells
-Index = Random Cell Index
-Item = Updated Selected Cell
-```
-
-#### 9. Crear hija base
-
-```text
-Make ST_DungeonCell
-GridX = Neighbor X
-GridY = Neighbor Y
-RoomType = Normal
-bNorth = false
-bEast = false
-bSouth = false
-bWest = false
-RoomSeed = New Room Seed
-RoomID = DungeonCells.Length
-→ Set New Base Cell
-```
-
-#### 10. Conectar hija hacia padre
-
-```text
-GetOppositeDirection(Selected Direction)
-→ Set Opposite Direction
-
-SetConnectionOnCell
-In Cell = New Base Cell
-Direction = Opposite Direction
-→ Out Cell
-→ Set New Connected Cell
-```
-
-#### 11. Añadir celda y link
-
-```text
-DungeonCells.Add(New Connected Cell)
-→ Print "Dungeon V2 | Added random cell"
-→ DungeonCellLinks.Add(
-     Make ST_DungeonCellLink
-     ParentCellIndex = Random Cell Index
-     DirectionFromParent = Selected Direction
-     bHasParent = true
-   )
-→ Return Added=true
-```
-
-### Invariantes
-
-```text
-Éxito:
-DungeonCells +1
-DungeonCellLinks +1
-
-Fallo:
-DungeonCells +0
-DungeonCellLinks +0
+Éxito → DungeonCells +1 y DungeonCellLinks +1
+Fallo → ambos +0
 ```
 
 ## SetConnectionOnCell
 
-### Estado
-
-✅ Firma real confirmada.  
-🛑 No cambiar sin actualizar todas las llamadas.
-
-### Firma
+Firma:
 
 ```text
 In Cell : ST_DungeonCell
@@ -501,43 +329,18 @@ Direction : E_DungeonDirection
 Out Cell : ST_DungeonCell
 ```
 
-### Funcionamiento
+Mapping:
 
 ```text
-Break In Cell
-→ Switch Direction
-   North → bNorth=true
-   East → bEast=true
-   South → bSouth=true
-   West → bWest=true
-→ Make ST_DungeonCell conservando todos los demás campos
-→ Out Cell
+North → bNorth=true
+East → bEast=true
+South → bSouth=true
+West → bWest=true
 ```
 
-No modifica `DungeonCells` directamente.
-
-El caller decide:
-
-```text
-Padre → Set Array Elem
-Hija → guardar Out Cell en New Connected Cell
-```
+Conserva todos los demás campos y no modifica el array directamente.
 
 ## GetNeighborCoord
-
-### Estado
-
-✅ Confirmado.  
-🛑 No tocar.
-
-### Firma
-
-```text
-Inputs: In Grid X, In Grid Y, Direction
-Outputs: Out Grid X, Out Grid Y
-```
-
-### Mapping
 
 ```text
 North → X, Y+1
@@ -548,10 +351,12 @@ West → X-1, Y
 
 ## GetOppositeDirection
 
-### Estado
+Estado actual:
 
-✅ Confirmado.  
-🛑 No tocar.
+```text
+✅ Confirmada
+✅ Convertida a Pure durante el refactor padre-hija
+```
 
 ```text
 North → South
@@ -560,147 +365,104 @@ South → North
 West → East
 ```
 
+## GetDirectionVector
+
+Creada el 2026-07-21.
+
+Firma:
+
+```text
+Input: Direction : E_DungeonDirection
+Output: Direction Vector : Vector
+```
+
+Mapping:
+
+```text
+North → ( 0,  1, 0)
+East  → ( 1,  0, 0)
+South → ( 0, -1, 0)
+West  → (-1,  0, 0)
+```
+
+Implementación:
+
+```text
+Select indexado por Direction
+→ Direction Vector
+```
+
+Estado de `Pure`:
+
+```text
+🟡 Pendiente de confirmar
+```
+
+La captura final todavía muestra pines de ejecución.
+
 ## IsCellOccupied
-
-### Estado
-
-✅ Confirmado.  
-🛑 No tocar.
-
-### Lógica
 
 ```text
 ForEach DungeonCells
-→ Break Cell
-→ Cell.GridX == InGridX
-AND Cell.GridY == InGridY
+→ comparar GridX e GridY simultáneamente
 → ocupado
 ```
 
-Debe comparar ambas coordenadas simultáneamente.
-
 ## FindCellIndexByCoord
-
-### Estado
-
-✅ Confirmado.  
-🛑 No tocar.
-
-### Lógica
 
 ```text
 Resultado inicial = -1
 → recorrer DungeonCells
-→ comparar GridX y GridY
+→ comparar GridX/GridY
 → devolver ArrayIndex al encontrar
 ```
 
 ## ChooseKeyAndBossCells
 
-### Estado
-
-✅ Funcional y probado.
-
-### Inicialización
-
-```text
-BossCellIndex = -1
-KeyCellIndex = -1
-BestBossDistance = -1
-BestKeyDistance = -1
-```
-
 ### Boss
 
-Contar conexiones:
-
 ```text
-ConnectionCount =
-SelectInt(bNorth, 1, 0)
-+ SelectInt(bEast, 1, 0)
-+ SelectInt(bSouth, 1, 0)
-+ SelectInt(bWest, 1, 0)
-```
-
-Configuración correcta:
-
-```text
-True / Pick A = 1
-False / B = 0
-```
-
-Candidato Boss:
-
-```text
-RoomType != Start
-AND ConnectionCount == 1
-```
-
-Distancia:
-
-```text
+ConnectionCount = suma de N/E/S/W
+candidato = RoomType != Start AND ConnectionCount == 1
 DistanceFromStart = Abs(GridX) + Abs(GridY)
-```
-
-Se guarda el dead-end más lejano:
-
-```text
-BestBossDistance
-BossCellIndex
-BossGridX
-BossGridY
-```
-
-Después se reconstruye la celda preservando todos los campos y cambiando solo:
-
-```text
-RoomType = Boss
+elegir dead-end más lejano
+→ RoomType = Boss preservando todos los datos
 ```
 
 ### Key
-
-Condiciones:
 
 ```text
 RoomType != Start
 ArrayIndex != BossCellIndex
 DistanceFromStart >= 3
-```
-
-Cálculos:
-
-```text
-DistanceFromStart = Abs(GridX) + Abs(GridY)
-DistanceFromBoss = Abs(GridX-BossGridX) + Abs(GridY-BossGridY)
+DistanceFromBoss = Manhattan
 KeyScore = DistanceFromBoss * DistanceFromStart
+→ elegir mejor score
+→ RoomType = Key preservando todos los datos
 ```
 
-La mejor puntuación se guarda en `BestKeyDistance` y su índice en `KeyCellIndex`.
+## SpawnRoomsFromCells — sistema antiguo
 
-Después se cambia solo:
+Estado:
 
 ```text
-RoomType = Key
+✅ Funciona con grid físico fijo
+⏳ Sustitución progresiva para tamaños variables
 ```
 
-## SpawnRoomsFromCells
-
-### Estado
-
-✅ Funciona con grid físico fijo.  
-⏳ Será sustituida o dividida para tamaños variables.  
-⚪ Montaje exacto pendiente de capturas completas antes de tocar.
-
-### Flujo conceptual confirmado
+Flujo confirmado por capturas:
 
 ```text
 ForEach DungeonCells
-→ Break Cell
-→ WorldX = GridX * CellSize
-→ WorldY = GridY * CellSize
-→ seleccionar clase por RoomType
+→ Break ST_DungeonCell
+→ GridX * CellSize
+→ GridY * CellSize
+→ Make Vector
+→ Make Transform
+→ Switch on E_DungeonRoomType
+→ Set Selected Room Class
 → SpawnActor
-→ InitRoomFromCell Message
+→ InitRoomFromCell
 → Add SpawnedRooms
 ```
 
@@ -708,7 +470,7 @@ Clases:
 
 ```text
 Start → StartDebugRoomClass
-Normal → DebugRoomClass (actualmente puede ser BP_RoomMaster_Dungeon)
+Normal → DebugRoomClass / clase procedural
 Key → KeyDebugRoomClass
 Boss → BossDebugRoomClass
 ```
@@ -716,65 +478,162 @@ Boss → BossDebugRoomClass
 Limitación:
 
 ```text
-Salas mayores que el tamaño previsto pueden solaparse.
+Salas de tamaños distintos pueden solaparse
 ```
 
-Siguiente refactor aprobado:
+## SpawnStartRoom
+
+Estado:
 
 ```text
-SpawnStartRoom
-SpawnRemainingRoomsFromParents
+✅ Creada
+✅ Compila
+✅ Prueba aislada superada
+✅ SpawnedRooms.Num == 1
+✅ SpawnedRooms[0] = Start
 ```
+
+Flujo:
+
+```text
+validar DungeonCells[0]
+→ comprobar RoomType Start
+→ SpawnActor Start Room Class en GetActorLocation del generador
+→ validar actor
+→ InitRoomFromCell(DungeonCells[0])
+→ Add SpawnedRooms
+```
+
+Detalles completos: `docs/26_SPAWN_START_ROOM.md`.
+
+## SpawnFirstChildRoom
+
+Estado:
+
+```text
+✅ Creada
+✅ Compila
+✅ ChildIndex 1 validado
+✅ SpawnedRooms.Num == 2
+✅ Error final DoorPoint = 0.0
+```
+
+Validaciones:
+
+```text
+DungeonCells.IsValidIndex(1)
+DungeonCellLinks.IsValidIndex(1)
+bHasParent == true
+SpawnedRooms.IsValidIndex(ParentCellIndex)
+Parent actor válido
+Child actor válido
+```
+
+Variables locales:
+
+```text
+Parent Room Actor : Actor Object Reference, no array
+Child Room Actor : Actor Object Reference, no array
+Child Entry Direction : E_DungeonDirection
+Parent Door Location : Vector
+Child Door Location : Vector
+```
+
+Selección de clase:
+
+```text
+Normal → clase Normal/procedural
+Key → Key Debug Room Class
+Boss → Boss Debug Room Class
+Start → error y Return
+```
+
+Spawn temporal:
+
+```text
+Location = GetActorLocation del generador
+Collision Handling = Always Spawn, Ignore Collisions
+InitRoomFromCell(DungeonCells[1]) una vez
+```
+
+Direcciones:
+
+```text
+ParentDirection = DungeonCellLinks[1].DirectionFromParent
+ChildEntryDirection = GetOppositeDirection(ParentDirection)
+```
+
+Puertas:
+
+```text
+ParentDoor = GetDoorWorldLocation(ParentRoomActor, ParentDirection)
+ChildDoor = GetDoorWorldLocation(ChildRoomActor, ChildEntryDirection)
+```
+
+Alineación exacta validada:
+
+```text
+MoveDelta = ParentDoorLocation - ChildDoorLocation
+NewLocation = ChildRoomActor.GetActorLocation + MoveDelta
+SetActorLocation sobre la misma hija
+```
+
+Resultado:
+
+```text
+SpawnedRooms[0] = Start
+SpawnedRooms[1] = primera hija
+SpawnedRooms.Num = 2
+Distance(ChildDoorAfterMove, ParentDoorLocation) = 0.0
+```
+
+Error de debug resuelto:
+
+```text
+2950
+```
+
+Era la distancia entre la puerta y el centro/ubicación del actor, no un error de alineación.
+
+Detalles completos: `docs/27_SPAWN_FIRST_CHILD_ROOM.md`.
 
 ## SpawnCorridorsFromConnections
 
-### Estado
+Estado:
 
-✅ Validado visualmente.  
-🛑 No tocar.
+```text
+✅ Validado visualmente
+🛑 No tocar todavía
+```
 
-Para evitar duplicados procesa solo:
+Procesa solo:
 
 ```text
 North
 East
 ```
 
-### Rama North
+North:
 
 ```text
-CurrentCell.bNorth
-→ GetNeighborCoord North
-→ FindCellIndexByCoord
-→ CurrentRoom = SpawnedRooms[CurrentIndex]
-→ NeighborRoom = SpawnedRooms[NeighborIndex]
-→ Start = CurrentRoom.GetDoorWorldLocation(North)
-→ End = NeighborRoom.GetDoorWorldLocation(South)
+CurrentRoom Door North
+→ NeighborRoom Door South
 → Spawn BP_Corridor_Debug
-→ Add SpawnedCorridors
 ```
 
-### Rama East
+East:
 
 ```text
-CurrentCell.bEast
-→ GetNeighborCoord East
-→ FindCellIndexByCoord
-→ Start = CurrentRoom.GetDoorWorldLocation(East)
-→ End = NeighborRoom.GetDoorWorldLocation(West)
+CurrentRoom Door East
+→ NeighborRoom Door West
 → Spawn BP_Corridor_Debug
-→ Add SpawnedCorridors
 ```
 
-No procesar South y West porque duplicaría conexiones.
+South y West no se procesan para evitar duplicados.
 
 ## SpawnBossRoomDoors
 
-### Estado
-
-✅ Funcional.
-
-### Validación
+Validaciones:
 
 ```text
 BossCellIndex >= 0
@@ -782,54 +641,41 @@ DungeonCells.IsValidIndex(BossCellIndex)
 SpawnedRooms.IsValidIndex(BossCellIndex)
 ```
 
-### Flujo
-
 ```text
 Get Boss Cell
 Get Boss Room Actor
-→ comprobar bNorth/bEast/bSouth/bWest
-→ por cada true llamar SpawnDoorAtRoomDirection
+→ comprobar conexiones
+→ SpawnDoorAtRoomDirection
 ```
-
-Como Boss suele ser dead-end, normalmente solo se crea una puerta.
 
 ## SpawnDoorAtRoomDirection
 
-### Estado
-
-✅ Funcional.
-
-### Firma
+Firma:
 
 ```text
 RoomActor : Actor Reference
 Direction : E_DungeonDirection
 ```
 
-### Flujo
-
 ```text
 IsValid RoomActor
 → IsValidClass BossDoorClass
-→ RoomActor.GetDoorWorldLocation(Direction)
-→ elegir DoorRotation
-→ SpawnActor BossDoorClass
-   Collision Handling = Always Spawn, Ignore Collisions
+→ GetDoorWorldLocation
+→ elegir rotación
+→ SpawnActor Always Spawn, Ignore Collisions
 → Add SpawnedDungeonDoors
 ```
 
-Rotaciones aprobadas:
+Rotaciones:
 
 ```text
-North = Yaw 0
-East = Yaw -90
-South = Yaw 180
-West = Yaw 90
+North = 0
+East = -90
+South = 180
+West = 90
 ```
 
 ## Funciones Debug
-
-Documentadas en `docs/12_FUNCIONES_DEBUG.md`:
 
 ```text
 DebugPrintLayout
@@ -838,10 +684,41 @@ DebugDrawDoorPoints
 DebugDrawDoorToDoorConnections
 ```
 
-## Siguiente función a crear
+Documentadas en `docs/12_FUNCIONES_DEBUG.md`.
+
+## Invariantes críticas
 
 ```text
-SpawnStartRoom
+DungeonCells[Index]
+=
+DungeonCellLinks[Index]
+=
+SpawnedRooms[Index]
 ```
 
-No construirla sin revisar antes capturas completas de `SpawnRoomsFromCells`.
+```text
+ParentCellIndex < ChildIndex
+```
+
+```text
+Start ConnectionCount == 1
+```
+
+```text
+Una habitación se genera una vez y después se mueve.
+No regenerar HISM durante intentos de colocación.
+```
+
+## Siguiente paso exacto
+
+```text
+confirmar Pure en GetDirectionVector
+→ definir CorridorLength temporal
+→ DesiredChildDoor = ParentDoorLocation + DirectionVector * CorridorLength
+→ MoveDelta = DesiredChildDoor - ChildDoorLocation
+→ mover misma hija
+→ validar DoorDistance == CorridorLength
+→ probar dos direcciones
+```
+
+Después se implementarán RoomBounds y reintentos por solapamiento.
