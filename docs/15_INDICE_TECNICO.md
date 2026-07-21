@@ -29,7 +29,7 @@ UI mini inventario
 
 # BP_DungeonGenerator_V2
 
-## Funciones
+## Funciones confirmadas
 
 ```text
 GenerateDungeon
@@ -41,7 +41,10 @@ GetNeighborCoord
 TryAddRandomCell
 BuildDungeonLayout
 SpawnRoomsFromCells
+SpawnStartRoom
+SpawnFirstChildRoom
 GetOppositeDirection
+GetDirectionVector
 SetConnectionOnCell
 DebugPrintLayout
 DebugDrawConnections
@@ -57,11 +60,9 @@ SpawnDoorAtRoomDirection
 ## Futuras funciones
 
 ```text
-SpawnStartRoom
 SpawnRemainingRoomsFromParents
 PlaceChildRoomFromParent
 DoesRoomOverlapPlacedRooms
-GetDirectionVector
 ValidateDungeonData
 ```
 
@@ -150,12 +151,87 @@ DistanceFromBoss
 KeyScore
 ```
 
+## Locales de SpawnFirstChildRoom
+
+```text
+Parent Room Actor : Actor Object Reference, no array
+Child Room Actor : Actor Object Reference, no array
+Child Entry Direction : E_DungeonDirection
+Parent Door Location : Vector
+Child Door Location : Vector
+```
+
 ## Locales de Boss Door
 
 ```text
 BossRoomActor
 DoorWorldLocation
 DoorRotation
+```
+
+## SpawnStartRoom — resumen
+
+```text
+DungeonCells[0]
+→ validar Start
+→ SpawnActor Start Room Class
+→ InitRoomFromCell
+→ SpawnedRooms[0]
+```
+
+Resultado confirmado:
+
+```text
+SpawnedRooms.Num == 1
+```
+
+## SpawnFirstChildRoom — resumen
+
+```text
+ChildIndex = 1
+DungeonCellLinks[1]
+→ ParentCellIndex
+→ SpawnedRooms[ParentCellIndex]
+→ Parent Room Actor
+```
+
+```text
+DirectionFromParent
+→ GetOppositeDirection
+→ Child Entry Direction
+```
+
+```text
+Parent Door = GetDoorWorldLocation(Parent, DirectionFromParent)
+Child Door = GetDoorWorldLocation(Child, ChildEntryDirection)
+MoveDelta = ParentDoor - ChildDoor
+SetActorLocation misma hija
+→ SpawnedRooms[1]
+```
+
+Resultados confirmados:
+
+```text
+SpawnedRooms.Num == 2
+Door alignment error == 0.0
+```
+
+## GetDirectionVector
+
+```text
+Input: Direction : E_DungeonDirection
+Output: Direction Vector : Vector
+```
+
+```text
+North → ( 0,  1, 0)
+East  → ( 1,  0, 0)
+South → ( 0, -1, 0)
+West  → (-1,  0, 0)
+```
+
+```text
+Pure: pendiente de confirmar
 ```
 
 # ST_DungeonCell
@@ -472,6 +548,15 @@ S = 180
 W = 90
 ```
 
+## Direction Vector
+
+```text
+N → (0,1,0)
+E → (1,0,0)
+S → (0,-1,0)
+W → (-1,0,0)
+```
+
 # Invariantes rápidas
 
 ```text
@@ -494,10 +579,20 @@ Start ConnectionCount == 1
 SpawnCorridorsFromConnections procesa solo North/East
 ```
 
+```text
+La habitación hija se genera una vez y después se mueve.
+No regenerar HISM durante reintentos.
+```
+
 # Estado actual
 
 ```text
 Links validados: 10, 15, 20, 50, 150
 Start una salida: validado
-Siguiente paso: SpawnStartRoom
+SpawnStartRoom: validado
+SpawnFirstChildRoom: validado
+SpawnedRooms.Num: 2
+Door alignment error: 0.0
+GetDirectionVector: mapping validado, Pure pendiente
+Siguiente paso: separación inicial CorridorLength
 ```
