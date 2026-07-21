@@ -26,23 +26,25 @@ current_phase:
     - "DungeonCellLinks array created"
     - "Start link created"
     - "Child links created in TryAddRandomCell"
-    - "Cells and Links counts validated"
+    - "Cells and Links counts validated up to 150 rooms"
     - "ParentCellIndex validated"
     - "Start limited to one logical exit"
     - "GitHub repository established as official technical memory"
     - "SpawnRoomsFromCells fully reviewed by screenshots"
-    - "SpawnStartRoom created"
-    - "SpawnStartRoom compiled and tested in isolation"
-    - "SpawnedRooms index 0 validated as Start"
-    - "SpawnFirstChildRoom validation chain created"
+    - "SpawnStartRoom created and tested"
+    - "SpawnedRooms[0] validated as Start"
+    - "SpawnFirstChildRoom created and tested"
     - "ChildIndex 1 spawned and initialized once"
     - "Parent and child DoorPoints acquired through BPI_DungeonRoomV2"
     - "Child room moved without regenerating HISM"
     - "First-child door alignment error validated as 0.0"
-  active: "Phase D - Add controlled corridor separation to ChildIndex 1"
-  next: "Create a pure direction-vector helper and offset the desired child door by a test corridor length"
+    - "SpawnedRooms.Num validated as 2"
+    - "GetDirectionVector created with correct N/E/S/W mapping"
+  active: "Phase D.1 - Add controlled corridor separation to ChildIndex 1"
+  next: "Confirm GetDirectionVector Pure, choose a test CorridorLength, and offset DesiredChildDoor"
   blocked_on:
-    - "Confirm a suitable initial corridor-length value from the current room/tile scale"
+    - "Confirm or activate Pure on GetDirectionVector"
+    - "Choose a temporary corridor-length value appropriate for the current tile scale"
 
 validated_room_counts:
   - 10
@@ -59,6 +61,8 @@ validated_invariants:
   parent_before_child: true
   start_connection_count: 1
   spawned_rooms_zero_is_start: true
+  spawned_rooms_one_is_first_child: true
+  spawned_rooms_num_first_child_test: 2
   first_child_uses_parent_link: true
   first_child_entry_is_opposite_parent_direction: true
   first_child_moves_same_actor_reference: true
@@ -91,7 +95,6 @@ spawn_start_room:
     spawned_rooms_num: 1
     spawned_rooms_0_valid: true
     start_one_opening: true
-    child_rooms_spawned: false
   protected_rules:
     - "Do not use DebugRoomClass for Start"
     - "Do not set transform Scale Z to 0"
@@ -100,7 +103,7 @@ spawn_start_room:
     - "Keep Start as SpawnedRooms[0]"
 
 first_child_placement:
-  status: "alignment_confirmed_corridor_offset_pending"
+  status: "exact_alignment_confirmed_corridor_offset_pending"
   function: "SpawnFirstChildRoom"
   child_index: 1
   validations:
@@ -110,6 +113,12 @@ first_child_placement:
     parent_cell_index_valid_in_spawned_rooms: true
     parent_actor_valid: true
     child_actor_valid: true
+  locals:
+    Parent_Room_Actor: "Actor Object Reference, not array"
+    Child_Room_Actor: "Actor Object Reference, not array"
+    Child_Entry_Direction: "E_DungeonDirection"
+    Parent_Door_Location: "Vector"
+    Child_Door_Location: "Vector"
   direction_logic:
     parent_direction_source: "DungeonCellLinks[1].DirectionFromParent"
     child_entry_direction: "GetOppositeDirection(DirectionFromParent)"
@@ -129,12 +138,34 @@ first_child_placement:
     measured_error_after_move: 0.0
   array_result:
     child_added_to: "SpawnedRooms"
-    expected_index: 1
-  remaining_before_phase_close:
-    - "Confirm SpawnedRooms.Num == 2 with a dedicated print or debugger inspection"
+    stored_index: 1
+    spawned_rooms_num: 2
+  corrected_debug_error:
+    incorrect_value: 2950
+    cause: "Distance compared child door against actor location/center instead of ParentDoorLocation"
+    corrected_measurement: "Distance(ChildDoorAfterMove, ParentDoorLocation)"
+    corrected_result: 0.0
+  remaining_before_corridor_offset_complete:
+    - "Confirm or activate Pure on GetDirectionVector"
     - "Add a controlled corridor gap"
-    - "Retest alignment using DesiredChildDoor instead of the exact ParentDoor"
-    - "Test more than one DirectionFromParent direction"
+    - "Retest distance using DesiredChildDoor"
+    - "Test at least two DirectionFromParent values"
+
+get_direction_vector:
+  status: "created_mapping_confirmed_pure_pending"
+  function: "GetDirectionVector"
+  input:
+    Direction: "E_DungeonDirection"
+  output:
+    Direction_Vector: "Vector"
+  mapping:
+    North: [0, 1, 0]
+    East: [1, 0, 0]
+    South: [0, -1, 0]
+    West: [-1, 0, 0]
+  implementation: "Select indexed by Direction"
+  pure_confirmed: false
+  pure_note: "Final screenshot still shows execution pins"
 
 approved_v1_room_count:
   status: "conceptual_not_implemented"
@@ -144,6 +175,17 @@ approved_v1_room_count:
   boss_rooms: 1
   total_physical_rooms: 18
   rule: "Start, Key and Boss do not consume the 15 normal-room count but remain in indexed arrays"
+
+current_temporary_generate_flow:
+  - "GenerateDungeon"
+  - "Switch Has Authority"
+  - "ResetDungeon"
+  - "InitRandomStream"
+  - "CreateStartCell"
+  - "BuildDungeonLayout"
+  - "ChooseKeyAndBossCells"
+  - "SpawnStartRoom"
+  - "SpawnFirstChildRoom"
 
 stable_full_spawn_flow_before_refactor:
   - "GenerateDungeon"
@@ -194,8 +236,12 @@ current_debug:
     preserved: true
   first_child_alignment_distance:
     enabled: true
-    result: 0.0
     temporary: true
+    result: 0.0
+  spawned_rooms_length:
+    enabled: true
+    temporary: true
+    result: 2
 
 memory_policy:
   repository_is_official_memory: true
@@ -215,17 +261,23 @@ memory_policy:
     - "knowledge YAML when critical data changes"
   do_not_wait_for_chat_memory: true
 
+session_close:
+  date: "2026-07-21"
+  handoff_file: "sessions/2026-07-21_CIERRE_SESION.md"
+  status: "Paused cleanly after exact first-child alignment and GetDirectionVector creation"
+
 next_acceptance_criteria:
   function_or_flow: "First child corridor separation, ChildIndex 1"
   checks:
+    - "GetDirectionVector Pure confirmed or activated"
     - "Direction vector matches DirectionFromParent"
     - "DesiredChildDoor equals ParentDoor plus DirectionVector times CorridorLength"
     - "Child is moved using the same actor reference"
     - "Door distance after movement equals the chosen CorridorLength"
-    - "SpawnedRooms.Num equals 2"
+    - "SpawnedRooms.Num remains 2"
     - "SpawnedRooms[0] remains Start"
     - "SpawnedRooms[1] corresponds to DungeonCells[1]"
-    - "Test at least two different parent directions"
+    - "Test at least two parent directions"
 
 out_of_scope_now:
   - "Spawn all child rooms"
