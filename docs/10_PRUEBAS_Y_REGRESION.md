@@ -47,31 +47,61 @@ Este archivo reúne todas las pruebas que deben repetirse después de cambios im
 - [x] 150 habitaciones alcanzadas.
 - [x] Visualmente Start muestra un único pasillo.
 
-## 4. Spawn actual
+## 4. Spawn antiguo
 
 Antes del refactor padre-hija:
 
 - [ ] `DungeonCells.Num == SpawnedRooms.Num`.
 - [ ] Cada `SpawnedRooms[Index]` corresponde al tipo de `DungeonCells[Index]`.
 - [ ] No hay referencias nulas.
-- [ ] `InitRoomFromCell` se ejecuta después de `SpawnActor`.
+- [x] `InitRoomFromCell` se ejecuta después de `SpawnActor` en el montaje visible.
 - [ ] `SpawnedRooms` se limpia al regenerar.
 
 ## 5. SpawnStartRoom
 
-Pruebas futuras inmediatas:
+Prueba aislada completada el 2026-07-21:
 
-- [ ] `DungeonCells.IsValidIndex(0)`.
-- [ ] `DungeonCellLinks.IsValidIndex(0)`.
-- [ ] `StartDebugRoomClass` válido.
-- [ ] Solo se spawnea una sala.
-- [ ] `SpawnedRooms.Num == 1`.
-- [ ] `SpawnedRooms[0]` válido.
-- [ ] Start colocada en origen acordado.
-- [ ] `InitRoomFromCell(DungeonCells[0])` ejecutado.
-- [ ] Una única apertura visible.
+- [x] `DungeonCells.IsValidIndex(0)`.
+- [x] `DungeonCells[0].RoomType == Start`.
+- [x] Clase Start conectada al `SpawnActor`.
+- [x] `GetActorLocation` del generador alimenta el transform.
+- [x] Transform con escala `1,1,1`.
+- [x] Return Value de `SpawnActor` validado.
+- [x] Solo se spawnea una sala.
+- [x] `SpawnedRooms.Num == 1`.
+- [x] `SpawnedRooms[0]` válido.
+- [x] Start colocada en el origen del generador.
+- [x] `InitRoomFromCell(DungeonCells[0])` ejecutado.
+- [x] Una única apertura visible.
+- [x] No se spawnean hijas durante la prueba aislada.
+- [x] Los fallos de índice, tipo y spawn tienen prints de diagnóstico.
 
-## 6. Habitación procedural
+Validación lógica relacionada:
+
+- [x] `DungeonCellLinks.IsValidIndex(0)` ya estaba confirmada en la fase de links.
+- [x] `DungeonCellLinks[0].bHasParent == false`.
+- [x] `DungeonCellLinks[0].ParentCellIndex == -1`.
+
+## 6. Primera hija padre-hija
+
+Próxima prueba inmediata:
+
+- [ ] `DungeonCells.IsValidIndex(1)`.
+- [ ] `DungeonCellLinks.IsValidIndex(1)`.
+- [ ] `DungeonCellLinks[1].bHasParent == true`.
+- [ ] `ParentCellIndex` válido.
+- [ ] `SpawnedRooms.IsValidIndex(ParentCellIndex)`.
+- [ ] La hija se genera una sola vez.
+- [ ] `InitRoomFromCell(DungeonCells[1])` se ejecuta una sola vez.
+- [ ] `ChildEntryDirection = GetOppositeDirection(DirectionFromParent)`.
+- [ ] ParentDoor corresponde a `DirectionFromParent`.
+- [ ] ChildDoor corresponde a `ChildEntryDirection`.
+- [ ] La hija se mueve, no se regenera, para alinear puertas.
+- [ ] `SpawnedRooms.Num == 2`.
+- [ ] `SpawnedRooms[0]` sigue siendo Start.
+- [ ] `SpawnedRooms[1]` corresponde a `DungeonCells[1]`.
+
+## 7. Habitación procedural
 
 Tamaños:
 
@@ -98,7 +128,7 @@ Bounds:
 - [ ] `BoundsPaddingZ=20` se ve correcto.
 - [ ] Verificar si `BoundsHalfHeight` sigue conectado.
 
-## 7. Direcciones y DoorPoints
+## 8. Direcciones y DoorPoints
 
 ### Aperturas
 
@@ -122,7 +152,7 @@ Bounds:
 - [ ] West conecta puntos interiores.
 - [ ] Ningún pasillo atraviesa una sala completa.
 
-## 8. Paredes y HISM
+## 9. Paredes y HISM
 
 - [ ] `ClearInstances` antes de regenerar.
 - [ ] `SetupFloor` antes de paredes.
@@ -140,7 +170,7 @@ Bounds:
 - [ ] `MeshMinZ` corrige pared.
 - [ ] `ColumnMinZ` corrige columna.
 
-## 9. Pasillos
+## 10. Pasillos
 
 - [ ] Se procesan solo North/East.
 - [ ] No hay duplicados.
@@ -150,7 +180,7 @@ Bounds:
 - [ ] Pasillo medio futuro.
 - [ ] Pasillo largo futuro.
 
-## 10. Boss y Key
+## 11. Boss y Key
 
 Boss:
 
@@ -167,7 +197,7 @@ Key:
 - [ ] `KeyScore` calculado correctamente.
 - [ ] `RoomType` cambia sin perder datos.
 
-## 11. Boss Door
+## 12. Boss Door
 
 - [ ] Índice Boss válido.
 - [ ] Room Boss válida.
@@ -180,7 +210,7 @@ Key:
 - [ ] No abre sin llave.
 - [ ] Abre con llave.
 
-## 12. Pickup e inventario temporal
+## 13. Pickup e inventario temporal
 
 - [ ] Pickup aparece tras Delay temporal.
 - [ ] Usa el punto central correcto.
@@ -189,16 +219,7 @@ Key:
 - [ ] UI abre con `O`.
 - [ ] La Boss Door consulta el item requerido.
 
-## 13. Colocación padre-hija
-
-Primera hija:
-
-- [ ] `ParentCellIndex` válido.
-- [ ] Padre ya existe en `SpawnedRooms`.
-- [ ] `ChildEntryDirection` opuesta.
-- [ ] ParentDoor correcto.
-- [ ] ChildDoor correcto.
-- [ ] `MoveDelta` alinea puertas.
+## 14. Colocación padre-hija completa
 
 Solapamiento:
 
@@ -217,7 +238,7 @@ Layout completo:
 - [ ] Pasillos conectan puertas.
 - [ ] Boss Door sigue correcta.
 
-## 14. Regeneración
+## 15. Regeneración
 
 - [ ] Destruye puertas.
 - [ ] Destruye pasillos.
@@ -230,7 +251,7 @@ Layout completo:
 - [ ] Resetea Boss/Key.
 - [ ] No deja actores huérfanos.
 
-## 15. Rendimiento
+## 16. Rendimiento
 
 - [ ] Sin Tick en generador.
 - [ ] Sin Tick en salas para generación.
