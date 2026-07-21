@@ -64,17 +64,40 @@ El debug temporal de cantidades y links se conserva, pero queda desactivado hast
 ✅ SpawnedRooms[0] es Start y es válido.
 ```
 
+### SpawnFirstChildRoom
+
+```text
+✅ Creada y compilada.
+✅ Trabaja solo con ChildIndex 1.
+✅ Obtiene su padre desde DungeonCellLinks[1].
+✅ Spawnea e inicializa una sola hija.
+✅ Alinea ParentDoor y ChildDoor moviendo la misma referencia.
+✅ SpawnedRooms.Num == 2.
+✅ SpawnedRooms[0] = Start.
+✅ SpawnedRooms[1] = primera hija.
+✅ Error matemático final entre DoorPoints = 0.0.
+```
+
+### GetDirectionVector
+
+```text
+✅ Función creada.
+✅ North = (0,1,0).
+✅ East = (1,0,0).
+✅ South = (0,-1,0).
+✅ West = (-1,0,0).
+🟡 Pure pendiente de confirmar: la captura todavía muestra pines de ejecución.
+```
+
 ### Próximo paso exacto
 
 ```text
-Fase D — una sola hija
-→ usar ChildIndex 1
-→ leer DungeonCellLinks[1]
-→ obtener ParentCellIndex y DirectionFromParent
-→ spawnear e inicializar una única hija
-→ alinear ParentDoor y ChildDoor
-→ guardar como SpawnedRooms[1]
-→ validar SpawnedRooms.Num == 2
+Confirmar/activar Pure en GetDirectionVector
+→ crear CorridorLength temporal de prueba
+→ DesiredChildDoor = ParentDoor + DirectionVector * CorridorLength
+→ mover la misma hija
+→ validar Distance(ParentDoor, ChildDoorAfterMove) == CorridorLength
+→ probar al menos dos direcciones
 ```
 
 Todavía no se debe colocar toda la mazmorra padre-hija de una vez.
@@ -110,6 +133,7 @@ Todavía no se debe colocar toda la mazmorra padre-hija de una vez.
 | [`docs/24_GLOSARIO.md`](docs/24_GLOSARIO.md) | Glosario técnico del sistema |
 | [`docs/25_DIAGRAMAS_DE_FLUJO.md`](docs/25_DIAGRAMAS_DE_FLUJO.md) | Diagramas ASCII de los flujos principales |
 | [`docs/26_SPAWN_START_ROOM.md`](docs/26_SPAWN_START_ROOM.md) | Implementación confirmada y pruebas de SpawnStartRoom |
+| [`docs/27_SPAWN_FIRST_CHILD_ROOM.md`](docs/27_SPAWN_FIRST_CHILD_ROOM.md) | Primera hija, alineación exacta y GetDirectionVector |
 | [`knowledge/README.md`](knowledge/README.md) | Guía de la base machine-readable |
 | [`knowledge/state.yaml`](knowledge/state.yaml) | Estado actual estructurado |
 | [`knowledge/assets.yaml`](knowledge/assets.yaml) | Inventario estructurado de assets |
@@ -126,8 +150,11 @@ Todavía no se debe colocar toda la mazmorra padre-hija de una vez.
 Issue #1 — SpawnStartRoom
 → completada
 
+Issue #2 — primera hija padre-hija
+→ alineación exacta completada
+
 Siguiente issue
-→ primera hija padre-hija
+→ separación inicial para pasillo y preparación de bounds
 ```
 
 Hay plantillas de issues para:
