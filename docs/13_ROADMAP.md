@@ -28,40 +28,52 @@
 ### Fase C — SpawnStartRoom
 
 ```text
-⏳ Siguiente fase inmediata.
+✅ Función creada.
+✅ DungeonCells[0] validada.
+✅ RoomType Start validado.
+✅ Usa la clase Start.
+✅ Usa GetActorLocation del generador como origen.
+✅ SpawnActor validado.
+✅ InitRoomFromCell ejecutado.
+✅ Actor añadido como SpawnedRooms[0].
+✅ Prueba aislada: SpawnedRooms.Num == 1.
+✅ Start conserva una sola apertura.
 ```
 
-Objetivo:
-
-```text
-Spawn solo de Start
-→ índice 0 correcto
-→ origen correcto
-→ InitRoomFromCell
-→ SpawnedRooms[0]
-```
-
-Antes de implementarla:
-
-```text
-Revisar capturas completas de SpawnRoomsFromCells.
-```
+La fase queda cerrada el 2026-07-21.
 
 ### Fase D — Una sola hija
 
 ```text
-⏳ Pendiente.
+⏳ Fase inmediata actual.
 ```
 
 Objetivo:
 
 ```text
 ChildIndex = 1
-→ leer link
-→ obtener padre
-→ spawnear hija
-→ alinear DoorPoint a DoorPoint
+→ leer DungeonCellLinks[1]
+→ validar bHasParent
+→ obtener ParentCellIndex
+→ obtener SpawnedRooms[ParentCellIndex]
+→ spawnear una sola hija
+→ InitRoomFromCell(DungeonCells[1])
+→ calcular ChildEntryDirection opuesta
+→ obtener ParentDoor y ChildDoor
+→ mover la hija para alinear puertas
+→ añadirla como SpawnedRooms[1]
 ```
+
+Prueba de aceptación:
+
+```text
+SpawnedRooms.Num == 2
+SpawnedRooms[0] = Start
+SpawnedRooms[1] = primera hija
+ParentDoor y ChildDoor quedan alineadas con la separación acordada
+```
+
+No incluir todavía bounds globales ni reintentos.
 
 ### Fase E — Bounds
 
@@ -130,54 +142,86 @@ Objetivo:
 - regeneración;
 - layouts grandes.
 
+## Regla de cantidad V1
+
+Aprobada conceptualmente, todavía no implementada:
+
+```text
+15 habitaciones normales/procedurales
++ 1 Start
++ 1 Key
++ 1 Boss
+= 18 habitaciones físicas
+```
+
+Start, Key y Boss no consumen el contador de 15 normales, pero permanecen dentro de los arrays y conservan sus índices.
+
 ## Próximo paso exacto
 
-### 1. Recibir capturas
+### 1. Preparar prueba de una sola hija
 
-Necesarias de `SpawnRoomsFromCells`:
-
-```text
-ForEach DungeonCells
-Break Cell
-GridX/GridY * CellSize
-Switch RoomType
-SelectedRoomClass
-SpawnActor
-InitRoomFromCell
-Add SpawnedRooms
-```
-
-### 2. Diseñar SpawnStartRoom
-
-No inventar nodos que no existan en el montaje actual.
-
-### 3. Prueba aislada
-
-Temporalmente, `GenerateDungeon` debe poder ejecutar solo:
+No recorrer todavía todas las celdas.
 
 ```text
-layout lógico
-→ ChooseKeyAndBossCells
-→ SpawnStartRoom
+Start ya existe como SpawnedRooms[0]
+→ trabajar exclusivamente con ChildIndex 1
 ```
 
-sin lanzar todavía todas las salas si hace falta una prueba controlada.
-
-### 4. Validación
+### 2. Validar datos
 
 ```text
-SpawnedRooms.Num == 1
-SpawnedRooms[0] válido
-DungeonCells[0].RoomType == Start
-DungeonCellLinks[0].bHasParent == false
+DungeonCells.IsValidIndex(1)
+DungeonCellLinks.IsValidIndex(1)
+DungeonCellLinks[1].bHasParent == true
+ParentCellIndex válido
+SpawnedRooms.IsValidIndex(ParentCellIndex)
 ```
 
-## Funciones futuras previstas
+### 3. Spawnear e inicializar una vez
+
+```text
+seleccionar clase según DungeonCells[1].RoomType
+→ SpawnActor
+→ IsValid
+→ InitRoomFromCell(DungeonCells[1])
+```
+
+### 4. Alinear puertas
+
+```text
+ParentDirection = DirectionFromParent
+ChildEntryDirection = GetOppositeDirection(ParentDirection)
+ParentDoor = ParentRoom.GetDoorWorldLocation(ParentDirection)
+ChildDoor = ChildRoom.GetDoorWorldLocation(ChildEntryDirection)
+MoveDelta = DesiredChildDoor - ChildDoor
+SetActorLocation(CurrentChildLocation + MoveDelta)
+```
+
+La separación inicial del pasillo se definirá al montar esta prueba. No inventar un nombre de variable definitivo hasta crearla y verla en Blueprint.
+
+### 5. Validación
+
+```text
+SpawnedRooms.Num == 2
+índices 0 y 1 correctos
+una sola hija generada
+una sola llamada de InitRoomFromCell para la hija
+puertas visualmente alineadas
+```
+
+## Funciones previstas
+
+Ya creada:
 
 ```text
 SpawnStartRoom
-SpawnRemainingRoomsFromParents
+```
+
+Futuras, una por fase:
+
+```text
 PlaceChildRoomFromParent
+SpawnRemainingRoomsFromParents
 DoesRoomOverlapPlacedRooms
 GetDirectionVector
 ```
