@@ -40,40 +40,55 @@
 ✅ Start conserva una sola apertura.
 ```
 
-La fase queda cerrada el 2026-07-21.
+Fase cerrada el 2026-07-21.
 
-### Fase D — Una sola hija
-
-```text
-⏳ Fase inmediata actual.
-```
-
-Objetivo:
+### Fase D — Una sola hija alineada
 
 ```text
-ChildIndex = 1
-→ leer DungeonCellLinks[1]
-→ validar bHasParent
-→ obtener ParentCellIndex
-→ obtener SpawnedRooms[ParentCellIndex]
-→ spawnear una sola hija
-→ InitRoomFromCell(DungeonCells[1])
-→ calcular ChildEntryDirection opuesta
-→ obtener ParentDoor y ChildDoor
-→ mover la hija para alinear puertas
-→ añadirla como SpawnedRooms[1]
+✅ SpawnFirstChildRoom creada.
+✅ ChildIndex = 1.
+✅ DungeonCells[1] validada.
+✅ DungeonCellLinks[1] validada.
+✅ bHasParent=true validado.
+✅ ParentCellIndex resuelto.
+✅ Parent Room Actor obtenido desde SpawnedRooms.
+✅ Hija spawneada e inicializada una sola vez.
+✅ ChildEntryDirection opuesta calculada.
+✅ ParentDoor y ChildDoor obtenidos por interfaz.
+✅ Misma hija movida sin regenerar HISM.
+✅ Añadida como SpawnedRooms[1].
+✅ SpawnedRooms.Num == 2.
+✅ Error de alineación final = 0.0.
 ```
 
-Prueba de aceptación:
+La prueba base sin separación de pasillo queda validada.
+
+### Fase D.1 — Separación inicial para pasillo
 
 ```text
-SpawnedRooms.Num == 2
-SpawnedRooms[0] = Start
-SpawnedRooms[1] = primera hija
-ParentDoor y ChildDoor quedan alineadas con la separación acordada
+⏳ Próxima fase inmediata.
 ```
 
-No incluir todavía bounds globales ni reintentos.
+Ya creado:
+
+```text
+✅ GetDirectionVector.
+✅ North → (0,1,0).
+✅ East → (1,0,0).
+✅ South → (0,-1,0).
+✅ West → (-1,0,0).
+```
+
+Pendiente:
+
+```text
+Confirmar/activar Pure en GetDirectionVector.
+Definir CorridorLength de prueba.
+DesiredChildDoor = ParentDoor + DirectionVector * CorridorLength.
+Mover la misma hija.
+Comprobar DoorDistance == CorridorLength.
+Probar al menos dos direcciones.
+```
 
 ### Fase E — Bounds
 
@@ -87,6 +102,8 @@ Objetivo:
 GetRoomBoundsData
 → comparar hija con salas aceptadas
 ```
+
+No basta con alinear puertas: el sistema solo aceptará una sala cuando su `RoomBounds` no invada ninguna habitación colocada anteriormente.
 
 ### Fase F — Reintentos
 
@@ -103,6 +120,14 @@ si hay choque
 → repetir
 ```
 
+Reglas:
+
+```text
+No regenerar la habitación.
+No repetir InitRoomFromCell.
+Límite de intentos obligatorio.
+```
+
 ### Fase G — Todas las hijas
 
 ```text
@@ -113,6 +138,16 @@ Objetivo:
 
 ```text
 SpawnRemainingRoomsFromParents
+```
+
+Debe conservar:
+
+```text
+DungeonCells[Index]
+=
+DungeonCellLinks[Index]
+=
+SpawnedRooms[Index]
 ```
 
 ### Fase H — Pasillos variables
@@ -127,6 +162,8 @@ Objetivo:
 pasillo corto/medio/largo
 ```
 
+El sistema de colocación decidirá primero la distancia física válida. Después `SpawnCorridorsFromConnections` o su adaptación visual conectará los DoorPoints reales.
+
 ### Fase I — Regresión completa
 
 ```text
@@ -140,7 +177,9 @@ Objetivo:
 - pickup;
 - inventario;
 - regeneración;
-- layouts grandes.
+- layouts grandes;
+- rendimiento;
+- varias seeds.
 
 ## Regla de cantidad V1
 
@@ -158,72 +197,78 @@ Start, Key y Boss no consumen el contador de 15 normales, pero permanecen dentro
 
 ## Próximo paso exacto
 
-### 1. Preparar prueba de una sola hija
+### 1. Confirmar GetDirectionVector
 
-No recorrer todavía todas las celdas.
-
-```text
-Start ya existe como SpawnedRooms[0]
-→ trabajar exclusivamente con ChildIndex 1
-```
-
-### 2. Validar datos
+En la captura final el mapping es correcto, pero todavía aparecen pines blancos de ejecución.
 
 ```text
-DungeonCells.IsValidIndex(1)
-DungeonCellLinks.IsValidIndex(1)
-DungeonCellLinks[1].bHasParent == true
-ParentCellIndex válido
-SpawnedRooms.IsValidIndex(ParentCellIndex)
+Abrir GetDirectionVector
+→ confirmar o activar Pure
+→ compilar
 ```
 
-### 3. Spawnear e inicializar una vez
+### 2. Elegir longitud de prueba
+
+No fijar todavía el valor definitivo de producción. Usar un valor temporal coherente con el tamaño actual de las salas y baldosas.
+
+Nombre pendiente de confirmar al crearlo en Blueprint:
 
 ```text
-seleccionar clase según DungeonCells[1].RoomType
-→ SpawnActor
-→ IsValid
-→ InitRoomFromCell(DungeonCells[1])
+CorridorLength
 ```
 
-### 4. Alinear puertas
+### 3. Calcular puerta deseada
 
 ```text
-ParentDirection = DirectionFromParent
-ChildEntryDirection = GetOppositeDirection(ParentDirection)
-ParentDoor = ParentRoom.GetDoorWorldLocation(ParentDirection)
-ChildDoor = ChildRoom.GetDoorWorldLocation(ChildEntryDirection)
-MoveDelta = DesiredChildDoor - ChildDoor
-SetActorLocation(CurrentChildLocation + MoveDelta)
+DirectionVector = GetDirectionVector(DirectionFromParent)
+Offset = DirectionVector * CorridorLength
+DesiredChildDoor = ParentDoorLocation + Offset
 ```
 
-La separación inicial del pasillo se definirá al montar esta prueba. No inventar un nombre de variable definitivo hasta crearla y verla en Blueprint.
+### 4. Mover la hija
+
+Sustituir solo la resta actual:
+
+```text
+Antes:
+MoveDelta = ParentDoorLocation - ChildDoorLocation
+
+Después:
+MoveDelta = DesiredChildDoor - ChildDoorLocation
+```
+
+Mantener:
+
+```text
+NewChildLocation = ChildRoomActor.GetActorLocation + MoveDelta
+SetActorLocation sobre la misma referencia
+```
 
 ### 5. Validación
 
 ```text
 SpawnedRooms.Num == 2
-índices 0 y 1 correctos
-una sola hija generada
-una sola llamada de InitRoomFromCell para la hija
-puertas visualmente alineadas
+SpawnedRooms[0] = Start
+SpawnedRooms[1] = primera hija
+Distance(ParentDoor, ChildDoorAfterMove) == CorridorLength
 ```
 
-## Funciones previstas
+Probar al menos dos `DirectionFromParent` distintos.
 
-Ya creada:
+## Funciones creadas durante el refactor
 
 ```text
 SpawnStartRoom
+SpawnFirstChildRoom
+GetDirectionVector
 ```
 
-Futuras, una por fase:
+## Funciones futuras previstas
 
 ```text
 PlaceChildRoomFromParent
 SpawnRemainingRoomsFromParents
 DoesRoomOverlapPlacedRooms
-GetDirectionVector
 ```
 
 Posible futura:
