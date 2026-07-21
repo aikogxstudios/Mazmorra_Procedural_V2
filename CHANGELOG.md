@@ -2,6 +2,100 @@
 
 Todos los cambios técnicos importantes deben añadirse aquí y reflejarse también en `docs/00_ESTADO_ACTUAL.md`.
 
+## 2026-07-21 — Primera habitación hija alineada
+
+### Añadido
+
+- Creada `SpawnFirstChildRoom` dentro de `BP_DungeonGenerator_V2`.
+- Añadidas validaciones de `DungeonCells[1]`, `DungeonCellLinks[1]`, `bHasParent`, `ParentCellIndex`, actor padre y actor hija.
+- Añadidas variables locales:
+  - `Parent Room Actor`;
+  - `Child Room Actor`;
+  - `Child Entry Direction`;
+  - `Parent Door Location`;
+  - `Child Door Location`.
+- Añadida selección de clase de la hija según `RoomType`.
+- Añadidos mensajes de diagnóstico para fallos de datos, padre y spawn.
+- Creada `GetDirectionVector`.
+- Creado el documento técnico `docs/27_SPAWN_FIRST_CHILD_ROOM.md`.
+
+### Implementación confirmada
+
+```text
+DungeonCellLinks[1]
+→ ParentCellIndex
+→ SpawnedRooms[ParentCellIndex]
+→ Parent Room Actor
+```
+
+```text
+DirectionFromParent
+→ GetOppositeDirection
+→ ChildEntryDirection
+```
+
+```text
+ParentDoor = GetDoorWorldLocation(ParentRoomActor, DirectionFromParent)
+ChildDoor = GetDoorWorldLocation(ChildRoomActor, ChildEntryDirection)
+```
+
+```text
+MoveDelta = ParentDoorLocation - ChildDoorLocation
+NewLocation = ChildRoomActor.GetActorLocation + MoveDelta
+SetActorLocation sobre la misma hija
+```
+
+### Validado
+
+```text
+✅ Solo se genera una hija además de Start.
+✅ SpawnedRooms.Num == 2.
+✅ SpawnedRooms[0] = Start.
+✅ SpawnedRooms[1] = primera hija.
+✅ InitRoomFromCell se ejecuta una sola vez para la hija.
+✅ La hija se mueve sin regenerar HISM.
+✅ Distancia final entre DoorPoints = 0.0.
+```
+
+### Error corregido
+
+La primera medición mostró `2950` porque comparaba la puerta de la hija contra la ubicación/centro del actor.
+
+La medición correcta quedó:
+
+```text
+Distance(
+  ChildDoorWorldLocation después de mover,
+  ParentDoorLocation
+)
+= 0.0
+```
+
+### GetDirectionVector
+
+Mapping confirmado:
+
+```text
+North → ( 0,  1, 0)
+East  → ( 1,  0, 0)
+South → ( 0, -1, 0)
+West  → (-1,  0, 0)
+```
+
+La captura final aún muestra pines de ejecución; la propiedad `Pure` queda pendiente de confirmar en la próxima sesión.
+
+### Siguiente paso
+
+```text
+Confirmar/activar Pure en GetDirectionVector
+→ añadir CorridorLength de prueba
+→ DesiredChildDoor = ParentDoor + DirectionVector * CorridorLength
+→ mover la misma hija
+→ comprobar DoorDistance == CorridorLength
+```
+
+---
+
 ## 2026-07-21 — SpawnStartRoom completada
 
 ### Añadido
@@ -11,7 +105,7 @@ Todos los cambios técnicos importantes deben añadirse aquí y reflejarse tambi
 - Añadida comprobación de que `DungeonCells[0].RoomType == Start`.
 - Añadida validación del `Return Value` de `SpawnActor`.
 - Añadidos prints de diagnóstico para índice inválido, tipo incorrecto y fallo de spawn.
-- Añadido documento técnico `docs/18_SPAWN_START_ROOM.md`.
+- Añadido documento técnico `docs/26_SPAWN_START_ROOM.md`.
 
 ### Implementación confirmada
 
@@ -60,18 +154,6 @@ Aprobado conceptualmente para V1:
 
 La regla de conteo todavía no se implementa hasta estabilizar la colocación padre-hija.
 
-### Siguiente paso
-
-```text
-Fase D
-→ generar únicamente ChildIndex 1
-→ leer DungeonCellLinks[1]
-→ obtener su padre
-→ spawnear e inicializar una sola hija
-→ alinear DoorPoint de padre e hija
-→ comprobar SpawnedRooms.Num == 2
-```
-
 ---
 
 ## 2026-07-20 — Cierre de sesión y memoria permanente
@@ -89,13 +171,6 @@ Fase D
 - Añadida política permanente de actualización tras funciones probadas, bugs corregidos, fases cerradas y decisiones importantes.
 - Añadido cierre de sesión en `sessions/2026-07-20_CIERRE_SESION.md`.
 - Actualizado `knowledge/state.yaml` con el punto exacto de continuación.
-
-### Siguiente paso
-
-```text
-Revisar capturas completas de SpawnRoomsFromCells
-→ crear y probar únicamente SpawnStartRoom
-```
 
 ---
 
@@ -202,13 +277,6 @@ DebugDrawDoorPoints
 
 DebugDrawDoorToDoorConnections
 → líneas entre DoorPoints físicos
-```
-
-### Siguiente paso
-
-```text
-Revisar SpawnRoomsFromCells
-→ crear SpawnStartRoom
 ```
 
 ---
