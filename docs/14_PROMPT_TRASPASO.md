@@ -17,7 +17,7 @@ docs/05_BP_ROOMMASTER_DUNGEON.md
 docs/09_COLOCACION_PADRE_HIJA.md
 docs/10_PRUEBAS_Y_REGRESION.md
 docs/13_ROADMAP.md
-docs/18_SPAWN_START_ROOM.md
+docs/26_SPAWN_START_ROOM.md
 
 Consulta el resto del repositorio cuando la tarea toque ese sistema.
 
@@ -170,5 +170,5 @@ Pruebas → docs/10_PRUEBAS_Y_REGRESION.md
 Errores/decisiones → docs/11_ERRORES_Y_DECISIONES.md
 Debug → docs/12_FUNCIONES_DEBUG.md
 Roadmap → docs/13_ROADMAP.md
-SpawnStartRoom → docs/18_SPAWN_START_ROOM.md
+SpawnStartRoom → docs/26_SPAWN_START_ROOM.md
 ```
