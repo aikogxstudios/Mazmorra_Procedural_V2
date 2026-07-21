@@ -84,22 +84,36 @@ Validación lógica relacionada:
 
 ## 6. Primera hija padre-hija
 
-Próxima prueba inmediata:
+Prueba controlada completada el 2026-07-21:
 
-- [ ] `DungeonCells.IsValidIndex(1)`.
-- [ ] `DungeonCellLinks.IsValidIndex(1)`.
-- [ ] `DungeonCellLinks[1].bHasParent == true`.
-- [ ] `ParentCellIndex` válido.
-- [ ] `SpawnedRooms.IsValidIndex(ParentCellIndex)`.
-- [ ] La hija se genera una sola vez.
-- [ ] `InitRoomFromCell(DungeonCells[1])` se ejecuta una sola vez.
-- [ ] `ChildEntryDirection = GetOppositeDirection(DirectionFromParent)`.
-- [ ] ParentDoor corresponde a `DirectionFromParent`.
-- [ ] ChildDoor corresponde a `ChildEntryDirection`.
-- [ ] La hija se mueve, no se regenera, para alinear puertas.
-- [ ] `SpawnedRooms.Num == 2`.
-- [ ] `SpawnedRooms[0]` sigue siendo Start.
-- [ ] `SpawnedRooms[1]` corresponde a `DungeonCells[1]`.
+- [x] `DungeonCells.IsValidIndex(1)`.
+- [x] `DungeonCellLinks.IsValidIndex(1)`.
+- [x] `DungeonCellLinks[1].bHasParent == true`.
+- [x] `ParentCellIndex` válido.
+- [x] `SpawnedRooms.IsValidIndex(ParentCellIndex)`.
+- [x] Actor padre validado.
+- [x] La hija se genera una sola vez.
+- [x] Return Value de la hija validado.
+- [x] `InitRoomFromCell(DungeonCells[1])` se ejecuta una sola vez.
+- [x] `ChildEntryDirection = GetOppositeDirection(DirectionFromParent)`.
+- [x] ParentDoor corresponde a `DirectionFromParent`.
+- [x] ChildDoor corresponde a `ChildEntryDirection`.
+- [x] La hija se mueve, no se regenera, para alinear puertas.
+- [x] `MoveDelta = ParentDoorLocation - ChildDoorLocation`.
+- [x] `SpawnedRooms.Num == 2` confirmado mediante Print.
+- [x] `SpawnedRooms[0]` sigue siendo Start.
+- [x] `SpawnedRooms[1]` corresponde a `DungeonCells[1]`.
+- [x] Distancia entre DoorPoints después de mover = `0.0`.
+- [x] La primera medición incorrecta `2950` fue diagnosticada: comparaba puerta contra centro/ubicación del actor.
+
+Pendiente para cerrar la colocación inicial con pasillo:
+
+- [x] `GetDirectionVector` creada.
+- [x] Mapping N/E/S/W correcto.
+- [ ] Confirmar/activar `Pure` en `GetDirectionVector`.
+- [ ] Añadir una separación inicial `CorridorLength`.
+- [ ] Validar que la distancia final entre puertas sea igual a `CorridorLength`.
+- [ ] Probar al menos dos direcciones diferentes.
 
 ## 7. Habitación procedural
 
