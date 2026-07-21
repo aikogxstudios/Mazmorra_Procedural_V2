@@ -16,6 +16,8 @@ docs/03_BP_DUNGEON_GENERATOR_V2.md
 docs/05_BP_ROOMMASTER_DUNGEON.md
 docs/09_COLOCACION_PADRE_HIJA.md
 docs/10_PRUEBAS_Y_REGRESION.md
+docs/13_ROADMAP.md
+docs/18_SPAWN_START_ROOM.md
 
 Consulta el resto del repositorio cuando la tarea toque ese sistema.
 
@@ -44,7 +46,6 @@ Estado confirmado:
   Random Cell Index → ParentCellIndex
   Selected Direction → DirectionFromParent
   bHasParent=true
-- No usa ReturnValue de Add DungeonCells, Random Direction Index ni Opposite Direction.
 - DungeonCells.Num == DungeonCellLinks.Num se validó con 10, 15, 20, 50 y 150 habitaciones.
 - ParentCellIndex es válido y menor que ChildIndex.
 - Start ya está limitada a una salida.
@@ -57,6 +58,42 @@ SelectedCell.bNorth OR bEast OR bSouth OR bWest
 
 True → Return Added=false
 False → continuar generación.
+
+SpawnRoomsFromCells fue revisada completamente mediante capturas. Su flujo antiguo es:
+ForEach DungeonCells
+→ Break ST_DungeonCell
+→ GridX/GridY * CellSize
+→ MakeTransform
+→ Switch E_DungeonRoomType
+→ SelectedRoomClass
+→ SpawnActor
+→ InitRoomFromCell
+→ Add SpawnedRooms
+
+SpawnStartRoom ya está creada, compilada y probada aisladamente.
+
+Flujo confirmado de SpawnStartRoom:
+- validar DungeonCells index 0;
+- comprobar RoomType == Start;
+- GetActorLocation del BP_DungeonGenerator_V2;
+- MakeTransform con Rotation 0 y Scale 1,1,1;
+- SpawnActor usando Start Room Class / StartDebugRoomClass;
+- validar Return Value;
+- InitRoomFromCell(DungeonCells[0]);
+- Add a SpawnedRooms.
+
+Resultado confirmado:
+- solo aparece Start;
+- SpawnedRooms.Num == 1;
+- SpawnedRooms[0] es válido;
+- Start conserva una sola apertura;
+- no aparecen hijas durante la prueba aislada.
+
+Correcciones que no deben perderse:
+- Scale Z debe ser 1, no 0.
+- El error de SpawnActor debe decir Failed to spawn Start Room, no DungeonCells[0] is not Start.
+- No añadir un actor a SpawnedRooms sin validar el Return Value.
+- InitRoomFromCell se ejecuta una sola vez.
 
 Blueprints:
 - BP_RoomMaster es el original y no se ha tocado.
@@ -80,6 +117,10 @@ SpawnCorridorsFromConnections está validado y procesa solo North/East para evit
 
 Visión V1:
 - Start preconstruida, cualquier tamaño y una sola salida.
+- 15 habitaciones normales/procedurales.
+- 1 Key y 1 Boss aparte de las 15 normales.
+- Total físico previsto: 18 habitaciones incluyendo Start.
+- La regla de cantidad está aprobada conceptualmente, pero no implementada todavía.
 - Normal y Key procedurales o preconstruidas.
 - Boss preconstruida, terminal y con una entrada.
 - Pasillos siempre presentes y de longitud variable.
@@ -88,16 +129,28 @@ Visión V1:
 - No regenerar HISM por cada intento.
 
 Punto exacto de continuación:
-Antes de diseñar nada, pedir capturas completas de SpawnRoomsFromCells.
-Después crear solamente SpawnStartRoom:
-- validar DungeonCells[0]
-- usar StartDebugRoomClass
-- spawnear Start en el origen acordado
-- InitRoomFromCell(DungeonCells[0])
-- añadirla como SpawnedRooms[0]
-- probar que SpawnedRooms.Num == 1
+Fase D — generar y alinear únicamente ChildIndex 1.
 
-No crear todavía todas las funciones futuras ni colocar todas las hijas.
+Objetivo:
+- validar DungeonCells[1];
+- validar DungeonCellLinks[1];
+- comprobar bHasParent=true;
+- leer ParentCellIndex y DirectionFromParent;
+- validar SpawnedRooms[ParentCellIndex];
+- spawnear una sola hija;
+- ejecutar InitRoomFromCell(DungeonCells[1]) una sola vez;
+- ChildEntryDirection = GetOppositeDirection(DirectionFromParent);
+- obtener ParentDoor y ChildDoor por interfaz;
+- mover la hija para alinear las puertas;
+- añadirla como SpawnedRooms[1];
+- probar SpawnedRooms.Num == 2.
+
+No crear todavía:
+- loop de todas las hijas;
+- bounds globales;
+- reintentos por solapamiento;
+- pasillos variables;
+- nuevas RoomTypes.
 
 Explica cada cambio Blueprint nodo por nodo, usando nombres reales de las capturas, y prueba una sola fase antes de avanzar.
 ```
@@ -117,4 +170,5 @@ Pruebas → docs/10_PRUEBAS_Y_REGRESION.md
 Errores/decisiones → docs/11_ERRORES_Y_DECISIONES.md
 Debug → docs/12_FUNCIONES_DEBUG.md
 Roadmap → docs/13_ROADMAP.md
+SpawnStartRoom → docs/18_SPAWN_START_ROOM.md
 ```
