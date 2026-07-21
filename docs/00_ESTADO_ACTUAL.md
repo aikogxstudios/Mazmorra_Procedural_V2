@@ -1,6 +1,6 @@
 # 00 — Estado actual confirmado
 
-**Última actualización:** 2026-07-19  
+**Última actualización:** 2026-07-21  
 **Motor:** Unreal Engine 5.4  
 **Sistema:** Aguja del Caos / Mazmorra Procedural V2
 
@@ -24,7 +24,8 @@ Este archivo es la referencia operativa más importante del repositorio.
 ✅ Conexiones simétricas North/East/South/West.
 ✅ Selección de Start, Key y Boss.
 ✅ Boss preferida como dead-end.
-✅ Spawn de salas debug.
+✅ Spawn de salas debug mediante el sistema antiguo.
+✅ SpawnStartRoom creada, compilada y probada aisladamente.
 ✅ BP_RoomMaster_Dungeon como sala Normal procedural de prueba.
 ✅ RoomWidth y RoomDepth variables.
 ✅ WallHeightTiles variable.
@@ -76,7 +77,7 @@ DirectionFromParent = Selected Direction
 bHasParent = true
 ```
 
-No se usa:
+No se usa para `ParentCellIndex`:
 
 ```text
 Return Value del Add de DungeonCells
@@ -132,8 +133,6 @@ Si el resultado es `true`:
 Return Added = false
 ```
 
-Si es `false`, `TryAddRandomCell` continúa normalmente.
-
 Pruebas superadas:
 
 ```text
@@ -144,11 +143,62 @@ Pruebas superadas:
 ✅ 150 habitaciones
 ```
 
-En todas, la Start mantuvo una sola salida y el layout siguió alcanzando el número objetivo de habitaciones.
+En todas, la Start mantuvo una sola salida y el layout siguió alcanzando el número objetivo.
 
-## Flujo real actual de GenerateDungeon
+## SpawnStartRoom
 
-Confirmado por captura:
+### Estado
+
+```text
+✅ Función creada.
+✅ Compila.
+✅ Prueba aislada superada.
+✅ Solo genera la habitación Start.
+✅ Usa Start Room Class / StartDebugRoomClass.
+✅ La posición nace desde GetActorLocation del BP_DungeonGenerator_V2.
+✅ Transform con escala 1,1,1.
+✅ Valida DungeonCells[0].
+✅ Comprueba RoomType == Start.
+✅ Valida el Return Value de SpawnActor.
+✅ Ejecuta InitRoomFromCell con DungeonCells[0].
+✅ Añade el actor válido a SpawnedRooms como índice 0.
+```
+
+Flujo confirmado por capturas:
+
+```text
+SpawnStartRoom
+→ DungeonCells.IsValidIndex(0)
+→ DungeonCells[0]
+→ comprobar RoomType == Start
+→ MakeTransform(GetActorLocation, Rotation 0, Scale 1)
+→ SpawnActor(Start Room Class)
+→ IsValid(Return Value)
+→ InitRoomFromCell(DungeonCells[0])
+→ Add SpawnedRooms
+```
+
+Errores controlados mediante prints:
+
+```text
+DungeonCells[0] inválida
+DungeonCells[0] no es Start
+fallo al spawnear Start Room
+```
+
+Resultado de la prueba:
+
+```text
+✅ Solo aparece Start.
+✅ SpawnedRooms.Num == 1.
+✅ SpawnedRooms[0] es válido.
+✅ Start conserva una única apertura.
+✅ No se generaron hijas durante la prueba aislada.
+```
+
+## Flujo estable anterior de GenerateDungeon
+
+Confirmado por captura antes del refactor físico:
 
 ```text
 GenerateDungeon
@@ -165,7 +215,7 @@ GenerateDungeon
 → DebugDrawDoorToDoorConnections
 ```
 
-`DebugPrintLayout` y `DebugDrawConnections` existen como funciones de diagnóstico; no necesariamente forman parte del cable principal mostrado.
+`SpawnStartRoom` se probó aisladamente sustituyendo temporalmente el bloque físico posterior. La integración final con todas las hijas todavía no está terminada.
 
 ## Blueprint procedural correcto
 
@@ -185,66 +235,61 @@ BP_RoomMaster_Dungeon
 → contiene UpdateRoomBounds
 ```
 
+## Regla de cantidad V1 aprobada conceptualmente
+
+Objetivo jugable previsto:
+
+```text
+15 habitaciones normales/procedurales
++ 1 Start
++ 1 Key
++ 1 Boss
+= 18 habitaciones físicas totales
+```
+
+Start, Key y Boss no consumen el contador de 15 normales, pero todas permanecen dentro de los arrays para conservar índices. Esta regla aún no está implementada en `MaxRooms`; se aplicará después de estabilizar la colocación padre-hija.
+
 ## Siguiente paso exacto
 
-Crear y probar únicamente:
+### Fase D — Una sola hija
+
+No generar todavía toda la mazmorra.
+
+Objetivo inmediato:
 
 ```text
-SpawnStartRoom
+ChildIndex = 1
+→ leer DungeonCellLinks[1]
+→ validar bHasParent
+→ obtener ParentCellIndex
+→ obtener SpawnedRooms[ParentCellIndex]
+→ spawnear una sola habitación hija
+→ InitRoomFromCell(DungeonCells[1])
+→ obtener ParentDoor y ChildDoor
+→ mover la hija para alinear DoorPoint con DoorPoint
+→ añadirla como SpawnedRooms[1]
 ```
 
-Objetivo:
+Primera prueba esperada:
 
 ```text
-Validar DungeonCells[0]
-→ usar StartDebugRoomClass
-→ SpawnActor en el origen del generador o world origin acordado
-→ InitRoomFromCell con DungeonCells[0]
-→ Add a SpawnedRooms
-→ garantizar que queda como SpawnedRooms[0]
+SpawnedRooms.Num == 2
+SpawnedRooms[0] = Start
+SpawnedRooms[1] = primera hija
+las puertas elegidas quedan alineadas
 ```
 
-Prueba mínima:
+Todavía no añadir en esta prueba:
 
 ```text
-DungeonCells[0]
-=
-DungeonCellLinks[0]
-=
-SpawnedRooms[0]
-```
-
-No se debe implementar todavía toda la colocación de hijas.
-
-## No avanzar aún a
-
-```text
-❌ Colocar todas las habitaciones de una vez.
-❌ Solapamiento completo de todo el layout.
-❌ Regenerar HISM durante intentos de posición.
+❌ Loop de todas las hijas.
+❌ Comparación de bounds contra todo el layout.
+❌ Reintentos por solapamiento.
+❌ Pasillos variables.
+❌ Regeneración repetida de HISM.
 ❌ Conexión pared con pared.
-❌ Level Instances como arquitectura principal.
-❌ Decoración, contenido avanzado o nuevas RoomTypes.
 ```
 
 ## Próxima información visual necesaria
 
-Antes de diseñar `SpawnStartRoom`, revisar capturas completas de:
-
-```text
-SpawnRoomsFromCells
-```
-
-Debe verse:
-
-```text
-ForEach DungeonCells
-GridX/GridY * CellSize
-Switch o selección de RoomType
-SelectedRoomClass
-SpawnActor
-InitRoomFromCell
-Add SpawnedRooms
-```
-
-No inventar el montaje exacto sin esas capturas.
+Antes de cablear la primera hija, confirmar mediante capturas el montaje real que se vaya creando y revisar cualquier función nueva paso a paso. No inventar nombres, pins ni estructura visual.
