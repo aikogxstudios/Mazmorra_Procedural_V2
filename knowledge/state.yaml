@@ -1,5 +1,6 @@
 schema_version: 1
-last_updated: "2026-07-21"
+last_updated: "2026-07-23"
+
 project:
   game: "Caos Entre Reinos / Chaos Among Realms: Reborn"
   system: "Aguja del Caos / Mazmorra Procedural V2"
@@ -22,36 +23,28 @@ truth_priority:
 
 current_phase:
   completed:
-    - "ST_DungeonCellLink created"
-    - "DungeonCellLinks array created"
-    - "Start link created"
-    - "Child links created in TryAddRandomCell"
-    - "Cells and Links counts validated up to 150 rooms"
-    - "ParentCellIndex validated"
+    - "ST_DungeonCellLink and DungeonCellLinks"
+    - "Cells and links counts validated up to 150 rooms"
     - "Start limited to one logical exit"
-    - "GitHub repository established as official technical memory"
-    - "SpawnRoomsFromCells fully reviewed by screenshots"
-    - "SpawnStartRoom created and tested"
-    - "SpawnedRooms[0] validated as Start"
-    - "SpawnFirstChildRoom created and tested"
-    - "ChildIndex 1 spawned and initialized once"
-    - "Parent and child DoorPoints acquired through BPI_DungeonRoomV2"
-    - "Child room moved without regenerating HISM"
-    - "First-child door alignment error validated as 0.0"
-    - "SpawnedRooms.Num validated as 2"
-    - "GetDirectionVector created with correct N/E/S/W mapping"
-  active: "Phase D.1 - Add controlled corridor separation to ChildIndex 1"
-  next: "Confirm GetDirectionVector Pure, choose a test CorridorLength, and offset DesiredChildDoor"
-  blocked_on:
-    - "Confirm or activate Pure on GetDirectionVector"
-    - "Choose a temporary corridor-length value appropriate for the current tile scale"
+    - "SpawnStartRoom validated"
+    - "SpawnFirstChildRoom validated for ChildIndex 1"
+    - "Exact DoorPoint alignment validated at 0.0"
+    - "GetDirectionVector Pure with correct N/E/S/W mapping"
+    - "Controlled corridor separation validated at distance 1000"
+    - "North validated with seed 12345"
+    - "East validated with seed 12346"
+    - "BP_Room_PreBuilt_Base adapted to BPI_DungeonRoomV2"
+    - "Prebuilt Start bounds validated at 980,980,400"
+    - "Procedural child bounds validated at 995,995,420"
+    - "AABB overlap comparison implemented"
+    - "Free placement returns false"
+    - "Forced overlap returns true"
+  active: "Phase F - Controlled placement retries for ChildIndex 1"
+  next: "Create formal retry variables and move the same child until bounds no longer overlap or max attempts is reached"
+  preflight_check:
+    - "Confirm temporary Vector * Float value was restored from -500 to 1000"
 
-validated_room_counts:
-  - 10
-  - 15
-  - 20
-  - 50
-  - 150
+validated_room_counts: [10, 15, 20, 50, 150]
 
 validated_invariants:
   cells_equal_links: true
@@ -66,115 +59,8 @@ validated_invariants:
   first_child_uses_parent_link: true
   first_child_entry_is_opposite_parent_direction: true
   first_child_moves_same_actor_reference: true
-  first_child_door_alignment_error: 0.0
-
-spawn_start_room:
-  status: "confirmed"
-  function: "SpawnStartRoom"
-  owner: "BP_DungeonGenerator_V2"
-  inputs: []
-  outputs: []
-  validations:
-    dungeon_cells_index_0_valid: true
-    room_type_is_start: true
-    spawn_return_value_validated: true
-  spawn:
-    class: "Start Room Class / StartDebugRoomClass"
-    location_source: "BP_DungeonGenerator_V2.GetActorLocation"
-    rotation: [0, 0, 0]
-    scale: [1, 1, 1]
-    collision_handling: "Default"
-  initialization:
-    interface_call: "Init Room from Cell"
-    cell_data: "DungeonCells[0]"
-    add_to_array: "SpawnedRooms"
-    expected_index: 0
-  test_results:
-    compiles: true
-    only_start_spawned: true
-    spawned_rooms_num: 1
-    spawned_rooms_0_valid: true
-    start_one_opening: true
-  protected_rules:
-    - "Do not use DebugRoomClass for Start"
-    - "Do not set transform Scale Z to 0"
-    - "Validate SpawnActor Return Value before InitRoomFromCell or Add"
-    - "Call InitRoomFromCell only once"
-    - "Keep Start as SpawnedRooms[0]"
-
-first_child_placement:
-  status: "exact_alignment_confirmed_corridor_offset_pending"
-  function: "SpawnFirstChildRoom"
-  child_index: 1
-  validations:
-    dungeon_cells_index_1_valid: true
-    dungeon_cell_links_index_1_valid: true
-    has_parent: true
-    parent_cell_index_valid_in_spawned_rooms: true
-    parent_actor_valid: true
-    child_actor_valid: true
-  locals:
-    Parent_Room_Actor: "Actor Object Reference, not array"
-    Child_Room_Actor: "Actor Object Reference, not array"
-    Child_Entry_Direction: "E_DungeonDirection"
-    Parent_Door_Location: "Vector"
-    Child_Door_Location: "Vector"
-  direction_logic:
-    parent_direction_source: "DungeonCellLinks[1].DirectionFromParent"
-    child_entry_direction: "GetOppositeDirection(DirectionFromParent)"
-    get_opposite_direction_pure: true
-  spawn:
-    class_source: "RoomType switch: Normal, Key or Boss class"
-    temporary_location: "BP_DungeonGenerator_V2.GetActorLocation"
-    collision_handling: "Always Spawn, Ignore Collisions"
-    initialized_with: "DungeonCells[1]"
-    initialization_count: 1
-  alignment:
-    parent_door: "GetDoorWorldLocation(ParentRoomActor, DirectionFromParent)"
-    child_door: "GetDoorWorldLocation(ChildRoomActor, ChildEntryDirection)"
-    move_delta: "ParentDoorLocation - ChildDoorLocation"
-    new_location: "ChildRoomActor.GetActorLocation + MoveDelta"
-    movement: "SetActorLocation on the same child actor"
-    measured_error_after_move: 0.0
-  array_result:
-    child_added_to: "SpawnedRooms"
-    stored_index: 1
-    spawned_rooms_num: 2
-  corrected_debug_error:
-    incorrect_value: 2950
-    cause: "Distance compared child door against actor location/center instead of ParentDoorLocation"
-    corrected_measurement: "Distance(ChildDoorAfterMove, ParentDoorLocation)"
-    corrected_result: 0.0
-  remaining_before_corridor_offset_complete:
-    - "Confirm or activate Pure on GetDirectionVector"
-    - "Add a controlled corridor gap"
-    - "Retest distance using DesiredChildDoor"
-    - "Test at least two DirectionFromParent values"
-
-get_direction_vector:
-  status: "created_mapping_confirmed_pure_pending"
-  function: "GetDirectionVector"
-  input:
-    Direction: "E_DungeonDirection"
-  output:
-    Direction_Vector: "Vector"
-  mapping:
-    North: [0, 1, 0]
-    East: [1, 0, 0]
-    South: [0, -1, 0]
-    West: [-1, 0, 0]
-  implementation: "Select indexed by Direction"
-  pure_confirmed: false
-  pure_note: "Final screenshot still shows execution pins"
-
-approved_v1_room_count:
-  status: "conceptual_not_implemented"
-  normal_rooms: 15
-  start_rooms: 1
-  key_rooms: 1
-  boss_rooms: 1
-  total_physical_rooms: 18
-  rule: "Start, Key and Boss do not consume the 15 normal-room count but remain in indexed arrays"
+  first_child_exact_alignment_error: 0.0
+  first_child_corridor_distance: 1000.0
 
 current_temporary_generate_flow:
   - "GenerateDungeon"
@@ -201,6 +87,137 @@ stable_full_spawn_flow_before_refactor:
   - "DebugDrawDoorPoints"
   - "DebugDrawDoorToDoorConnections"
 
+spawn_start_room:
+  status: "confirmed"
+  function: "SpawnStartRoom"
+  owner: "BP_DungeonGenerator_V2"
+  class_current_test: "BP_Room_PreBuilt_Base"
+  expected_index: 0
+  initialization_count: 1
+  spawn_transform:
+    location_source: "BP_DungeonGenerator_V2.GetActorLocation"
+    rotation: [0, 0, 0]
+    scale: [1, 1, 1]
+
+first_child_placement:
+  status: "corridor_separation_and_parent_overlap_test_confirmed"
+  function: "SpawnFirstChildRoom"
+  child_index: 1
+  locals_confirmed:
+    Parent_Room_Actor: "Actor Object Reference"
+    Child_Room_Actor: "Actor Object Reference"
+    Child_Entry_Direction: "E_DungeonDirection"
+    Parent_Direction: "E_DungeonDirection"
+    Parent_Door_Location: "Vector"
+    Child_Door_Location: "Vector"
+    Parent_Bounds_Center: "Vector"
+    Parent_Bounds_Extent: "Vector"
+    Child_Bounds_Center: "Vector"
+    Child_Bounds_Extent: "Vector"
+    bBoundsOverlap: "Boolean"
+  parent_direction_source: "DungeonCellLinks[1].DirectionFromParent"
+  child_entry_direction: "GetOppositeDirection(DirectionFromParent)"
+  child_spawn:
+    collision_handling: "Always Spawn, Ignore Collisions"
+    initialized_once: true
+  corridor_offset:
+    formal_variable_exists: false
+    current_literal: 1000.0
+    formula: "ParentDoorLocation + GetDirectionVector(ParentDirection) * 1000"
+  movement:
+    move_delta: "DesiredChildDoor - ChildDoorLocation"
+    new_location: "ChildRoomActor.GetActorLocation + MoveDelta"
+    same_actor_reference: true
+  tests:
+    seed_12345:
+      direction: "North"
+      door_distance: 1000.0
+      spawned_rooms_num: 2
+    seed_12346:
+      direction: "East"
+      door_distance: 1000.0
+      spawned_rooms_num: 2
+
+get_direction_vector:
+  status: "confirmed"
+  pure: true
+  mapping:
+    North: [0, 1, 0]
+    East: [1, 0, 0]
+    South: [0, -1, 0]
+    West: [-1, 0, 0]
+
+prebuilt_room_base:
+  asset: "BP_Room_PreBuilt_Base"
+  status: "prototype_confirmed"
+  interface: "BPI_DungeonRoomV2"
+  confirmed_contract:
+    - "Init Room from Cell"
+    - "Get Door World Location"
+    - "Get Room Bounds Data"
+    - "DoorPoint_North"
+    - "DoorPoint_East"
+    - "DoorPoint_South"
+    - "DoorPoint_West"
+    - "RoomBounds"
+  get_bounds_implementation:
+    component: "RoomBounds"
+    node: "Get Component Bounds"
+    center_output: "Origin"
+    extent_output: "Box Extent"
+  test_bounds_extent: [980, 980, 400]
+  relative_location_final_visual_check_pending: true
+  debug_components_still_present: true
+  future_visual_content:
+    - "Level Instance"
+    - "Packed Level Blueprint"
+
+procedural_room_bounds:
+  asset: "BP_RoomMaster_Dungeon"
+  status: "confirmed"
+  dynamic: true
+  first_child_test_extent: [995, 995, 420]
+
+parent_child_aabb:
+  status: "confirmed"
+  formula_x: "abs(parent_center_x - child_center_x) <= parent_extent_x + child_extent_x"
+  formula_y: "abs(parent_center_y - child_center_y) <= parent_extent_y + child_extent_y"
+  formula_z: "abs(parent_center_z - child_center_z) <= parent_extent_z + child_extent_z"
+  final_boolean: "overlap_x AND overlap_y AND overlap_z"
+  corrected_bug:
+    wrong: "abs(parent_center) - child_center"
+    correct: "abs(parent_center - child_center)"
+  tests:
+    free:
+      offset_literal: 1000.0
+      result: false
+    forced_overlap:
+      offset_literal: -500.0
+      result: true
+
+phase_f_planned_variables:
+  Corridor_Length:
+    type: "Float"
+    status: "pending_name_confirmation_on_creation"
+  Placement_Retry_Step:
+    type: "Float"
+    status: "pending_name_confirmation_on_creation"
+  Placement_Attempt:
+    type: "Integer"
+    status: "pending_name_confirmation_on_creation"
+  Max_Placement_Attempts:
+    type: "Integer"
+    status: "pending_name_confirmation_on_creation"
+
+phase_f_rules:
+  - "Work only with ChildIndex 1"
+  - "Do not call SpawnActor again"
+  - "Do not call InitRoomFromCell again"
+  - "Do not regenerate HISM"
+  - "Move the same ChildRoomActor reference"
+  - "Stop on success or MaxPlacementAttempts"
+  - "Keep SpawnedRooms.Num equal to 2"
+
 room_master_identity:
   original:
     asset: "BP_RoomMaster"
@@ -208,7 +225,6 @@ room_master_identity:
   dungeon_variant:
     asset: "BP_RoomMaster_Dungeon"
     modified: true
-    interface: "BPI_DungeonRoomV2"
 
 critical_mappings:
   init_room_from_cell:
@@ -221,27 +237,14 @@ critical_mappings:
     East: "Arrow_Exit_East"
     South: "Arrow_Exit_North"
     West: "Arrow_Exit_West"
-  boss_door_yaw:
-    North: 0
-    East: -90
-    South: 180
-    West: 90
 
-current_debug:
-  cells_links_print:
-    enabled: false
-    preserved: true
-  links_detail_print:
-    enabled: false
-    preserved: true
-  first_child_alignment_distance:
-    enabled: true
-    temporary: true
-    result: 0.0
-  spawned_rooms_length:
-    enabled: true
-    temporary: true
-    result: 2
+approved_v1_room_count:
+  status: "conceptual_not_implemented"
+  normal_rooms: 15
+  start_rooms: 1
+  key_rooms: 1
+  boss_rooms: 1
+  total_physical_rooms: 18
 
 memory_policy:
   repository_is_official_memory: true
@@ -251,39 +254,8 @@ memory_policy:
     - "A phase is completed"
     - "A variable, struct, enum, mapping or invariant changes"
     - "An important architectural decision is accepted or discarded"
-  update_targets:
-    - "docs/00_ESTADO_ACTUAL.md"
-    - "Affected subsystem document"
-    - "docs/10_PRUEBAS_Y_REGRESION.md"
-    - "CHANGELOG.md"
-    - "docs/13_ROADMAP.md when phase changes"
-    - "docs/14_PROMPT_TRASPASO.md"
-    - "knowledge YAML when critical data changes"
-  do_not_wait_for_chat_memory: true
 
 session_close:
-  date: "2026-07-21"
-  handoff_file: "sessions/2026-07-21_CIERRE_SESION.md"
-  status: "Paused cleanly after exact first-child alignment and GetDirectionVector creation"
-
-next_acceptance_criteria:
-  function_or_flow: "First child corridor separation, ChildIndex 1"
-  checks:
-    - "GetDirectionVector Pure confirmed or activated"
-    - "Direction vector matches DirectionFromParent"
-    - "DesiredChildDoor equals ParentDoor plus DirectionVector times CorridorLength"
-    - "Child is moved using the same actor reference"
-    - "Door distance after movement equals the chosen CorridorLength"
-    - "SpawnedRooms.Num remains 2"
-    - "SpawnedRooms[0] remains Start"
-    - "SpawnedRooms[1] corresponds to DungeonCells[1]"
-    - "Test at least two parent directions"
-
-out_of_scope_now:
-  - "Spawn all child rooms"
-  - "Full overlap system"
-  - "Variable corridor retry system"
-  - "Wall-to-wall connections"
-  - "Level Instances migration"
-  - "New room types"
-  - "Final inventory"
+  date: "2026-07-23"
+  handoff_file: "sessions/2026-07-23_ROOM_BOUNDS_VALIDATED.md"
+  status: "Paused cleanly before controlled retry implementation"
