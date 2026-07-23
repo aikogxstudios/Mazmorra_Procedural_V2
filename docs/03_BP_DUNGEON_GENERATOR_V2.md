@@ -1,27 +1,94 @@
 # 03 — BP_DungeonGenerator_V2
 
+**Última actualización:** 2026-07-23
+
 ## Responsabilidad general
 
-`BP_DungeonGenerator_V2` controla el grafo lógico, la selección de salas especiales y la generación física de la mazmorra.
-
-Este documento conserva el estado funcional actual del generador. Los detalles específicos de las nuevas funciones están ampliados en:
+`BP_DungeonGenerator_V2` controla:
 
 ```text
-docs/26_SPAWN_START_ROOM.md
-docs/27_SPAWN_FIRST_CHILD_ROOM.md
+layout lógico
+DungeonCellLinks
+selección Start/Key/Boss
+generación física
+colocación padre-hija
+pasillos y puertas
+limpieza y regeneración
 ```
 
-## Componentes
+El refactor actual trabaja con datos primero y spawn después.
 
-Confirmado por captura:
+## Componente confirmado
 
 ```text
 Scene
 ```
 
-## Funciones confirmadas
+## Invariante crítica
 
-Funciones originales:
+```text
+DungeonCells[Index]
+=
+DungeonCellLinks[Index]
+=
+SpawnedRooms[Index]
+```
+
+No reordenar `SpawnedRooms` ni usarlo para decoración.
+
+## Variables miembro conocidas
+
+### Layout y habitaciones
+
+```text
+Dungeon Seed          : Integer
+Use Random Seed       : Boolean
+Max Rooms             : Integer
+Max Generation Attempts : Integer
+Dungeon Cells         : Array<ST_DungeonCell>
+Dungeon Cell Links    : Array<ST_DungeonCellLink>
+Spawned Rooms         : Array<Actor Reference>
+Random Stream         : Random Stream
+Selected Room Class   : Actor Class Reference
+```
+
+### Clases de habitación
+
+```text
+Start Room Class / StartDebugRoomClass : Actor Class Reference
+Room Class / DebugRoomClass            : Actor Class Reference
+Key Debug Room Class                   : Actor Class Reference
+Boss Debug Room Class                  : Actor Class Reference
+```
+
+Durante la prueba actual:
+
+```text
+Start Room Class = BP_Room_PreBuilt_Base
+```
+
+### Pasillos
+
+```text
+Corridor Debug Class : Actor Class Reference
+Spawned Corridors    : Array<Actor Reference>
+```
+
+### Puertas
+
+```text
+Boss Door Class       : Actor Class Reference
+Spawned Dungeon Doors : Array<Actor Reference>
+```
+
+### Debug
+
+```text
+Generate on Begin Play : Boolean
+Debug Dungeon          : Boolean
+```
+
+## Funciones confirmadas
 
 ```text
 GenerateDungeon
@@ -34,95 +101,36 @@ TryAddRandomCell
 BuildDungeonLayout
 SpawnRoomsFromCells
 GetOppositeDirection
+GetDirectionVector
 SetConnectionOnCell
+ChooseKeyAndBossCells
+SpawnStartRoom
+SpawnFirstChildRoom
+SpawnCorridorsFromConnections
+SpawnBossRoomDoors
+SpawnDoorAtRoomDirection
 DebugPrintLayout
 DebugDrawConnections
 DebugDrawDoorPoints
-FindCellIndexByCoord
 DebugDrawDoorToDoorConnections
-SpawnCorridorsFromConnections
-ChooseKeyAndBossCells
-SpawnBossRoomDoors
-SpawnDoorAtRoomDirection
-```
-
-Funciones creadas durante el refactor padre-hija:
-
-```text
-SpawnStartRoom
-SpawnFirstChildRoom
-GetDirectionVector
-```
-
-Además existe:
-
-```text
-ConstructionScript
-```
-
-## Variables miembro confirmadas
-
-### Pasillos
-
-```text
-CorridorDebugClass : Actor Class Reference
-SpawnedCorridors : Array Actor Reference
-```
-
-### Habitaciones
-
-```text
-CellSize : Float
-DungeonSeed : Integer
-MaxGenerationAttempts : Integer
-StartDebugRoomClass : Actor Class Reference
-SpawnedRooms : Array Actor Reference
-DungeonCells : Array ST_DungeonCell
-RandomStream : Random Stream
-MaxRooms : Integer
-bUseRandomSeed : Boolean
-SelectedRoomClass : Actor Class Reference
-```
-
-### Debug
-
-```text
-DebugRoomClass : Actor Class Reference
-bGenerateonBeginPlay : Boolean
-bDebugDungeon : Boolean
-```
-
-### Boss Room
-
-```text
-BossCellIndex : Integer
-BossGridX : Integer
-BossGridY : Integer
-BossDebugRoomClass : Actor Class Reference
-BestBossDistance : Integer
-```
-
-### Key Room
-
-```text
-KeyCellIndex : Integer
-KeyGridX : Integer
-KeyGridY : Integer
-KeyDebugRoomClass : Actor Class Reference
-BestKeyDistance : Integer
-```
-
-`BestKeyDistance` funciona realmente como mejor `KeyScore`.
-
-### Puertas y links
-
-```text
-BossDoorClass : Actor Class Reference
-SpawnedDungeonDoors : Array Actor Reference
-DungeonCellLinks : Array ST_DungeonCellLink
+FindCellIndexByCoord
 ```
 
 ## GenerateDungeon
+
+### Flujo temporal actual
+
+```text
+GenerateDungeon
+→ Switch Has Authority
+→ ResetDungeon
+→ InitRandomStream
+→ CreateStartCell
+→ BuildDungeonLayout
+→ ChooseKeyAndBossCells
+→ SpawnStartRoom
+→ SpawnFirstChildRoom
+```
 
 ### Flujo estable anterior
 
@@ -141,170 +149,57 @@ GenerateDungeon
 → DebugDrawDoorToDoorConnections
 ```
 
-### Flujo temporal actual durante el refactor
-
-```text
-GenerateDungeon
-→ Switch Has Authority
-→ ResetDungeon
-→ InitRandomStream
-→ CreateStartCell
-→ BuildDungeonLayout
-→ ChooseKeyAndBossCells
-→ SpawnStartRoom
-→ SpawnFirstChildRoom
-```
-
-El sistema antiguo físico permanece desconectado temporalmente, no eliminado.
+El flujo anterior está desconectado temporalmente, no eliminado.
 
 ## ResetDungeon
 
-### Estado
+Estado:
 
 ```text
-✅ Estable
-🛑 Modificar solo para limpiar nuevos arrays o actores
+🛑 protegido
 ```
 
 Responsabilidad:
 
 ```text
-Destruir puertas
+destruir puertas
 → destruir pasillos
 → destruir salas
 → limpiar arrays físicos
-→ limpiar arrays lógicos
-→ resetear índices y scores
+→ limpiar DungeonCells y DungeonCellLinks
+→ resetear índices Boss/Key
 ```
 
-Orden documentado:
-
-```text
-ForEach SpawnedDungeonDoors → DestroyActor → Clear
-ForEach SpawnedCorridors → DestroyActor → Clear
-ForEach SpawnedRooms → DestroyActor → Clear
-Clear DungeonCells
-Clear DungeonCellLinks
-BossCellIndex = -1
-KeyCellIndex = -1
-BestBossDistance = -1
-BestKeyDistance = -1
-```
-
-## InitRandomStream
-
-### Estado
-
-```text
-✅ Responsabilidad confirmada
-🟡 Nodos exactos no documentados completamente
-🛑 No tocar ahora
-```
-
-```text
-Elegir DungeonSeed o seed aleatoria según bUseRandomSeed
-→ Initialize Random Stream
-→ guardar RandomStream
-```
+Solo modificar cuando se añada un array o actor persistente nuevo.
 
 ## CreateStartCell
 
+Crea:
+
 ```text
-Make ST_DungeonCell
+DungeonCells[0]
 GridX = 0
 GridY = 0
 RoomType = Start
-bNorth = false
-bEast = false
-bSouth = false
-bWest = false
 RoomID = 0
-RoomSeed = valor actual
-→ Add DungeonCells
 ```
 
+Y:
+
 ```text
-Make ST_DungeonCellLink
+DungeonCellLinks[0]
 ParentCellIndex = -1
 DirectionFromParent = North
 bHasParent = false
-→ Add DungeonCellLinks
 ```
 
-Resultado:
-
-```text
-DungeonCells.Num = 1
-DungeonCellLinks.Num = 1
-```
-
-## BuildDungeonLayout
-
-```text
-Llamar repetidamente a TryAddRandomCell
-hasta alcanzar MaxRooms
-o MaxGenerationAttempts
-```
-
-Pruebas alcanzadas:
-
-```text
-10
-15
-20
-50
-150 habitaciones
-```
+North es valor de relleno para Start; no se usa porque `bHasParent=false`.
 
 ## TryAddRandomCell
 
-### Variables locales
+Añade una hija lógica y su link padre.
 
-```text
-Random Cell Index
-Selected Cell
-Random Direction Index
-Selected Direction
-Neighbor X
-Neighbor Y
-New Room Seed
-Updated Selected Cell
-New Base Cell
-Opposite Direction
-New Connected Cell
-```
-
-### Flujo resumido confirmado
-
-```text
-validar DungeonCells no vacío
-→ elegir Random Cell Index
-→ obtener Selected Cell
-→ impedir segunda salida de Start
-→ elegir Selected Direction
-→ GetNeighborCoord
-→ IsCellOccupied
-→ generar RoomSeed
-→ SetConnectionOnCell del padre
-→ actualizar padre en DungeonCells
-→ crear New Base Cell Normal
-→ GetOppositeDirection
-→ conectar hija hacia padre
-→ Add DungeonCells
-→ Add DungeonCellLinks
-→ Return Added=true
-```
-
-Regla Start:
-
-```text
-Random Cell Index == 0
-AND
-Selected Cell tiene cualquier conexión
-→ Return Added=false
-```
-
-Link de hija:
+Link confirmado:
 
 ```text
 ParentCellIndex = Random Cell Index
@@ -312,67 +207,59 @@ DirectionFromParent = Selected Direction
 bHasParent = true
 ```
 
-Invariante:
+Regla Start:
 
 ```text
-Éxito → DungeonCells +1 y DungeonCellLinks +1
-Fallo → ambos +0
+Random Cell Index == 0
+AND
+Selected Cell tiene cualquier conexión activa
+→ Return Added=false
 ```
 
-## SetConnectionOnCell
-
-Firma:
+Pruebas:
 
 ```text
-In Cell : ST_DungeonCell
-Direction : E_DungeonDirection
-Out Cell : ST_DungeonCell
+10, 15, 20, 50 y 150 habitaciones
 ```
 
-Mapping:
+## Funciones protegidas de layout
 
 ```text
-North → bNorth=true
-East → bEast=true
-South → bSouth=true
-West → bWest=true
+🛑 GetNeighborCoord
+🛑 IsCellOccupied
+🛑 FindCellIndexByCoord
+🛑 SetConnectionOnCell
+🛑 BuildDungeonLayout
 ```
 
-Conserva todos los demás campos y no modifica el array directamente.
-
-## GetNeighborCoord
+Mappings de dirección lógica:
 
 ```text
 North → X, Y+1
-East → X+1, Y
+East  → X+1, Y
 South → X, Y-1
-West → X-1, Y
+West  → X-1, Y
 ```
 
 ## GetOppositeDirection
 
-Estado actual:
-
-```text
-✅ Confirmada
-✅ Convertida a Pure durante el refactor padre-hija
-```
+Pure confirmada:
 
 ```text
 North → South
-East → West
+East  → West
 South → North
-West → East
+West  → East
 ```
 
 ## GetDirectionVector
 
-Creada el 2026-07-21.
+Pure confirmada.
 
 Firma:
 
 ```text
-Input: Direction : E_DungeonDirection
+Input : Direction        : E_DungeonDirection
 Output: Direction Vector : Vector
 ```
 
@@ -389,56 +276,31 @@ Implementación:
 
 ```text
 Select indexado por Direction
-→ Direction Vector
-```
-
-Estado de `Pure`:
-
-```text
-🟡 Pendiente de confirmar
-```
-
-La captura final todavía muestra pines de ejecución.
-
-## IsCellOccupied
-
-```text
-ForEach DungeonCells
-→ comparar GridX e GridY simultáneamente
-→ ocupado
-```
-
-## FindCellIndexByCoord
-
-```text
-Resultado inicial = -1
-→ recorrer DungeonCells
-→ comparar GridX/GridY
-→ devolver ArrayIndex al encontrar
 ```
 
 ## ChooseKeyAndBossCells
 
-### Boss
+Estado:
 
 ```text
-ConnectionCount = suma de N/E/S/W
-candidato = RoomType != Start AND ConnectionCount == 1
-DistanceFromStart = Abs(GridX) + Abs(GridY)
-elegir dead-end más lejano
-→ RoomType = Boss preservando todos los datos
+🛑 protegido
 ```
 
-### Key
+Boss:
 
 ```text
 RoomType != Start
-ArrayIndex != BossCellIndex
+ConnectionCount == 1
+→ elegir dead-end más lejano
+```
+
+Key:
+
+```text
+no Start
+no Boss
 DistanceFromStart >= 3
-DistanceFromBoss = Manhattan
-KeyScore = DistanceFromBoss * DistanceFromStart
-→ elegir mejor score
-→ RoomType = Key preservando todos los datos
+→ mejor score DistanceFromBoss * DistanceFromStart
 ```
 
 ## SpawnRoomsFromCells — sistema antiguo
@@ -446,164 +308,338 @@ KeyScore = DistanceFromBoss * DistanceFromStart
 Estado:
 
 ```text
-✅ Funciona con grid físico fijo
-⏳ Sustitución progresiva para tamaños variables
-```
-
-Flujo confirmado por capturas:
-
-```text
-ForEach DungeonCells
-→ Break ST_DungeonCell
-→ GridX * CellSize
-→ GridY * CellSize
-→ Make Vector
-→ Make Transform
-→ Switch on E_DungeonRoomType
-→ Set Selected Room Class
-→ SpawnActor
-→ InitRoomFromCell
-→ Add SpawnedRooms
-```
-
-Clases:
-
-```text
-Start → StartDebugRoomClass
-Normal → DebugRoomClass / clase procedural
-Key → KeyDebugRoomClass
-Boss → BossDebugRoomClass
+✅ referencia funcional
+⏳ reemplazo progresivo por placement padre-hija
 ```
 
 Limitación:
 
 ```text
-Salas de tamaños distintos pueden solaparse
+GridX/GridY * CellSize
+→ no es seguro para habitaciones de tamaños distintos
 ```
+
+No borrarlo hasta cerrar el nuevo sistema.
 
 ## SpawnStartRoom
 
 Estado:
 
 ```text
-✅ Creada
-✅ Compila
-✅ Prueba aislada superada
-✅ SpawnedRooms.Num == 1
-✅ SpawnedRooms[0] = Start
+✅ creada
+✅ compilada
+✅ prueba aislada superada
 ```
 
 Flujo:
 
 ```text
 validar DungeonCells[0]
-→ comprobar RoomType Start
-→ SpawnActor Start Room Class en GetActorLocation del generador
-→ validar actor
-→ InitRoomFromCell(DungeonCells[0])
+→ comprobar RoomType == Start
+→ Make Transform desde GetActorLocation del generador
+→ SpawnActor con Start Room Class
+→ validar Return Value
+→ Init Room from Cell(DungeonCells[0])
 → Add SpawnedRooms
-```
-
-Detalles completos: `docs/26_SPAWN_START_ROOM.md`.
-
-## SpawnFirstChildRoom
-
-Estado:
-
-```text
-✅ Creada
-✅ Compila
-✅ ChildIndex 1 validado
-✅ SpawnedRooms.Num == 2
-✅ Error final DoorPoint = 0.0
-```
-
-Validaciones:
-
-```text
-DungeonCells.IsValidIndex(1)
-DungeonCellLinks.IsValidIndex(1)
-bHasParent == true
-SpawnedRooms.IsValidIndex(ParentCellIndex)
-Parent actor válido
-Child actor válido
-```
-
-Variables locales:
-
-```text
-Parent Room Actor : Actor Object Reference, no array
-Child Room Actor : Actor Object Reference, no array
-Child Entry Direction : E_DungeonDirection
-Parent Door Location : Vector
-Child Door Location : Vector
-```
-
-Selección de clase:
-
-```text
-Normal → clase Normal/procedural
-Key → Key Debug Room Class
-Boss → Boss Debug Room Class
-Start → error y Return
-```
-
-Spawn temporal:
-
-```text
-Location = GetActorLocation del generador
-Collision Handling = Always Spawn, Ignore Collisions
-InitRoomFromCell(DungeonCells[1]) una vez
-```
-
-Direcciones:
-
-```text
-ParentDirection = DungeonCellLinks[1].DirectionFromParent
-ChildEntryDirection = GetOppositeDirection(ParentDirection)
-```
-
-Puertas:
-
-```text
-ParentDoor = GetDoorWorldLocation(ParentRoomActor, ParentDirection)
-ChildDoor = GetDoorWorldLocation(ChildRoomActor, ChildEntryDirection)
-```
-
-Alineación exacta validada:
-
-```text
-MoveDelta = ParentDoorLocation - ChildDoorLocation
-NewLocation = ChildRoomActor.GetActorLocation + MoveDelta
-SetActorLocation sobre la misma hija
 ```
 
 Resultado:
 
 ```text
 SpawnedRooms[0] = Start
-SpawnedRooms[1] = primera hija
-SpawnedRooms.Num = 2
-Distance(ChildDoorAfterMove, ParentDoorLocation) = 0.0
 ```
 
-Error de debug resuelto:
+Reglas:
 
 ```text
-2950
+Scale = 1,1,1
+Init Room from Cell una sola vez
+validar actor antes de usarlo
 ```
 
-Era la distancia entre la puerta y el centro/ubicación del actor, no un error de alineación.
+## SpawnFirstChildRoom
 
-Detalles completos: `docs/27_SPAWN_FIRST_CHILD_ROOM.md`.
+Estado:
+
+```text
+✅ ChildIndex 1 spawneado
+✅ separación 1000 validada
+✅ bounds padre-hija validados
+✅ AABB validada
+```
+
+### Validaciones
+
+```text
+DungeonCells.IsValidIndex(1)
+DungeonCellLinks.IsValidIndex(1)
+bHasParent == true
+SpawnedRooms.IsValidIndex(ParentCellIndex)
+Parent Room Actor válido
+Child Room Actor válido
+```
+
+### Variables locales confirmadas
+
+```text
+Parent Room Actor     : Actor Object Reference
+Child Room Actor      : Actor Object Reference
+Child Entry Direction : E_DungeonDirection
+Parent Direction      : E_DungeonDirection
+Parent Door Location  : Vector
+Child Door Location   : Vector
+Parent Bounds Center  : Vector
+Parent Bounds Extent  : Vector
+Child Bounds Center   : Vector
+Child Bounds Extent   : Vector
+bBoundsOverlap        : Boolean
+```
+
+### Resolución del padre
+
+```text
+DungeonCellLinks[1].ParentCellIndex
+→ SpawnedRooms[ParentCellIndex]
+→ Parent Room Actor
+```
+
+### Dirección
+
+```text
+DungeonCellLinks[1].DirectionFromParent
+→ Parent Direction
+```
+
+```text
+Direction From Parent
+→ GetOppositeDirection
+→ Child Entry Direction
+```
+
+### Selección de clase hija
+
+```text
+DungeonCells[1].RoomType
+→ Switch on E_DungeonRoomType
+```
+
+Ramas actuales relevantes:
+
+```text
+Normal
+Key
+Boss
+Start → error y Return
+```
+
+### Spawn de hija
+
+```text
+SpawnActor en GetActorLocation del generador
+Collision Handling = Always Spawn, Ignore Collisions
+→ validar Return Value
+→ Set Child Room Actor
+→ Init Room from Cell(DungeonCells[1]) una sola vez
+```
+
+La hija nace temporalmente superpuesta y luego se mueve.
+
+### DoorPoints
+
+```text
+Parent Door =
+Get Door World Location(
+  Parent Room Actor,
+  Parent Direction
+)
+```
+
+```text
+Child Door =
+Get Door World Location(
+  Child Room Actor,
+  Child Entry Direction
+)
+```
+
+### Alineación base histórica
+
+```text
+MoveDelta = ParentDoorLocation - ChildDoorLocation
+```
+
+Resultado validado:
+
+```text
+Distance = 0.0
+```
+
+### Separación actual
+
+Variable local:
+
+```text
+Parent Direction : E_DungeonDirection
+```
+
+Montaje:
+
+```text
+Parent Direction
+→ GetDirectionVector
+→ Vector * Float (1000 temporal)
+```
+
+```text
+DesiredChildDoor =
+ParentDoorLocation
++ DirectionVector * 1000
+```
+
+```text
+MoveDelta = DesiredChildDoor - ChildDoorLocation
+NewChildLocation = ChildRoomActor.GetActorLocation + MoveDelta
+SetActorLocation sobre la misma Child Room Actor
+```
+
+Importante:
+
+```text
+1000 es un literal temporal.
+No existe todavía una variable formal confirmada Corridor Length.
+```
+
+Pruebas:
+
+```text
+Seed 12345 → North → Distance 1000
+Seed 12346 → East  → Distance 1000
+SpawnedRooms.Num = 2
+```
+
+### Bounds del padre
+
+```text
+Parent Room Actor
+→ Get Room Bounds Data
+→ Parent Bounds Center
+→ Parent Bounds Extent
+```
+
+### Bounds de la hija
+
+```text
+Child Room Actor
+→ Get Room Bounds Data
+→ Child Bounds Center
+→ Child Bounds Extent
+```
+
+### Comparación AABB
+
+```text
+OverlapX = Abs(ParentCenterX - ChildCenterX)
+           <= ParentExtentX + ChildExtentX
+
+OverlapY = Abs(ParentCenterY - ChildCenterY)
+           <= ParentExtentY + ChildExtentY
+
+OverlapZ = Abs(ParentCenterZ - ChildCenterZ)
+           <= ParentExtentZ + ChildExtentZ
+
+bBoundsOverlap = OverlapX AND OverlapY AND OverlapZ
+```
+
+Error corregido:
+
+```text
+INCORRECTO: Abs(ParentCenter) - ChildCenter
+CORRECTO:   Abs(ParentCenter - ChildCenter)
+```
+
+Pruebas:
+
+```text
+1000 → False
+-500 → True
+```
+
+Antes de continuar:
+
+```text
+confirmar que el literal volvió a 1000
+```
+
+### Resultado del array
+
+```text
+SpawnedRooms[0] = Start
+SpawnedRooms[1] = primera hija
+SpawnedRooms.Num = 2
+```
+
+## Fase F — reintentos controlados
+
+Próxima implementación, todavía solo dentro de `SpawnFirstChildRoom` y `ChildIndex=1`.
+
+Variables previstas:
+
+```text
+Corridor Length        : Float
+Placement Retry Step   : Float
+Placement Attempt      : Integer
+Max Placement Attempts : Integer
+```
+
+Los nombres y valores deben confirmarse al crearlos.
+
+Flujo:
+
+```text
+calcular posición candidata
+→ mover misma Child Room Actor
+→ consultar bounds
+→ calcular bBoundsOverlap
+```
+
+Si colisiona:
+
+```text
+Corridor Length += Placement Retry Step
+Placement Attempt += 1
+→ repetir
+```
+
+Si no colisiona:
+
+```text
+aceptar posición
+→ conservar SpawnedRooms[1]
+```
+
+Si alcanza máximo:
+
+```text
+Print String de error
+→ Return
+```
+
+Reglas:
+
+```text
+No volver a SpawnActor.
+No repetir Init Room from Cell.
+No regenerar HISM.
+Mover la misma referencia.
+No comparar todavía contra todas las salas.
+```
 
 ## SpawnCorridorsFromConnections
 
 Estado:
 
 ```text
-✅ Validado visualmente
-🛑 No tocar todavía
+🛑 protegido
 ```
 
 Procesa solo:
@@ -613,112 +649,45 @@ North
 East
 ```
 
-North:
+para evitar duplicados.
+
+## Mappings protegidos
+
+### InitRoomFromCell
 
 ```text
-CurrentRoom Door North
-→ NeighborRoom Door South
-→ Spawn BP_Corridor_Debug
+North → SouthOpening
+East  → WestOpening
+South → NorthOpening
+West  → EastOpening
 ```
 
-East:
+### GetDoorWorldLocation
 
 ```text
-CurrentRoom Door East
-→ NeighborRoom Door West
-→ Spawn BP_Corridor_Debug
+North → Arrow_Entrance_South
+East  → Arrow_Exit_East
+South → Arrow_Exit_North
+West  → Arrow_Exit_West
 ```
 
-South y West no se procesan para evitar duplicados.
-
-## SpawnBossRoomDoors
-
-Validaciones:
+## Funciones futuras previstas
 
 ```text
-BossCellIndex >= 0
-DungeonCells.IsValidIndex(BossCellIndex)
-SpawnedRooms.IsValidIndex(BossCellIndex)
+PlaceChildRoomFromParent
+DoesRoomOverlapPlacedRooms
+SpawnRemainingRoomsFromParents
+ValidateDungeonData (opcional)
 ```
+
+No crear todas juntas.
+
+## Referencias
 
 ```text
-Get Boss Cell
-Get Boss Room Actor
-→ comprobar conexiones
-→ SpawnDoorAtRoomDirection
+docs/26_SPAWN_START_ROOM.md
+docs/27_SPAWN_FIRST_CHILD_ROOM.md
+docs/28_ROOM_BOUNDS_FIRST_CHILD.md
+docs/29_BP_ROOM_PREBUILT_BASE.md
+sessions/2026-07-23_ROOM_BOUNDS_VALIDATED.md
 ```
-
-## SpawnDoorAtRoomDirection
-
-Firma:
-
-```text
-RoomActor : Actor Reference
-Direction : E_DungeonDirection
-```
-
-```text
-IsValid RoomActor
-→ IsValidClass BossDoorClass
-→ GetDoorWorldLocation
-→ elegir rotación
-→ SpawnActor Always Spawn, Ignore Collisions
-→ Add SpawnedDungeonDoors
-```
-
-Rotaciones:
-
-```text
-North = 0
-East = -90
-South = 180
-West = 90
-```
-
-## Funciones Debug
-
-```text
-DebugPrintLayout
-DebugDrawConnections
-DebugDrawDoorPoints
-DebugDrawDoorToDoorConnections
-```
-
-Documentadas en `docs/12_FUNCIONES_DEBUG.md`.
-
-## Invariantes críticas
-
-```text
-DungeonCells[Index]
-=
-DungeonCellLinks[Index]
-=
-SpawnedRooms[Index]
-```
-
-```text
-ParentCellIndex < ChildIndex
-```
-
-```text
-Start ConnectionCount == 1
-```
-
-```text
-Una habitación se genera una vez y después se mueve.
-No regenerar HISM durante intentos de colocación.
-```
-
-## Siguiente paso exacto
-
-```text
-confirmar Pure en GetDirectionVector
-→ definir CorridorLength temporal
-→ DesiredChildDoor = ParentDoorLocation + DirectionVector * CorridorLength
-→ MoveDelta = DesiredChildDoor - ChildDoorLocation
-→ mover misma hija
-→ validar DoorDistance == CorridorLength
-→ probar dos direcciones
-```
-
-Después se implementarán RoomBounds y reintentos por solapamiento.
