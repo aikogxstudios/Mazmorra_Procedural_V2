@@ -1,151 +1,376 @@
-# Sesión 2026-07-23 — RoomBounds y solapamiento validados
+# Sesión 2026-07-23 — Separación, prebuilt base y RoomBounds
 
-## Estado previo
+## Estado al comenzar
 
 ```text
 SpawnedRooms[0] = Start
 SpawnedRooms[1] = primera hija
 SpawnedRooms.Num = 2
-CorridorLength temporal = 1000
+DoorPoint alignment base = 0.0
 ```
 
-Pruebas de separación ya confirmadas:
+`SpawnFirstChildRoom` ya generaba e inicializaba una hija una sola vez y la movía usando su link padre.
+
+## 1. GetDirectionVector convertida en Pure
+
+Firma:
 
 ```text
-Seed 12345 → North → Distance = 1000
-Seed 12346 → East  → Distance = 1000
+Input : Direction        : E_DungeonDirection
+Output: Direction Vector : Vector
 ```
 
-## BP_Room_PreBuilt_Base
+Mapping confirmado:
 
-Se creó una base compatible con `BPI_DungeonRoomV2` para habitaciones preconstruidas.
+```text
+North → ( 0,  1, 0)
+East  → ( 1,  0, 0)
+South → ( 0, -1, 0)
+West  → (-1,  0, 0)
+```
 
-`Get Room Bounds Data` quedó implementada así:
+La llamada aparece como nodo verde sin pins de ejecución.
+
+## 2. Parent Direction
+
+Se añadió una variable local:
+
+```text
+Parent Direction : E_DungeonDirection
+```
+
+Origen exacto:
+
+```text
+DungeonCellLinks[1]
+→ Break ST_DungeonCellLink
+→ Direction From Parent
+→ Set Parent Direction
+```
+
+Se usa `Parent Direction` para desplazar la hija hacia fuera desde su padre.
+
+No usar `Child Entry Direction` para el vector de salida.
+
+## 3. Separación inicial de pasillo
+
+Montaje:
+
+```text
+Parent Direction
+→ GetDirectionVector
+→ Vector * Float (1000 temporal)
+```
+
+```text
+DesiredChildDoor =
+ParentDoorLocation
++ DirectionVector * 1000
+```
+
+La resta de movimiento pasó de:
+
+```text
+ParentDoorLocation - ChildDoorLocation
+```
+
+a:
+
+```text
+DesiredChildDoor - ChildDoorLocation
+```
+
+Se mantuvo:
+
+```text
+NewChildLocation = ChildRoomActor.GetActorLocation + MoveDelta
+SetActorLocation sobre la misma Child Room Actor
+```
+
+`1000` es un literal temporal en el nodo `Vector * Float`; todavía no existe una variable formal confirmada llamada `Corridor Length`.
+
+## 4. Pruebas de separación
+
+Con `Use Random Seed = false`:
+
+```text
+Seed 12345 → North
+Distance = 1000
+SpawnedRooms Length = 2
+```
+
+```text
+Seed 12346 → East
+Distance = 1000
+SpawnedRooms Length = 2
+```
+
+Confirmado:
+
+```text
+SpawnedRooms[0] = Start
+SpawnedRooms[1] = primera hija
+```
+
+No se repitió:
+
+```text
+SpawnActor
+Init Room from Cell
+GenerateRoom/HISM
+```
+
+## 5. BP_Room_PreBuilt_Base
+
+Se creó/adaptó:
+
+```text
+BP_Room_PreBuilt_Base
+```
+
+Objetivo:
+
+```text
+Base/controlador de habitaciones especiales construidas a mano
+```
+
+Contrato visible:
+
+```text
+BPI_DungeonRoomV2
+Init Room from Cell
+Get Door World Location
+Get Room Bounds Data
+DoorPoint_North
+DoorPoint_East
+DoorPoint_South
+DoorPoint_West
+RoomBounds
+```
+
+La base todavía conserva componentes visuales/debug del prototipo Start. No se limpiaron porque primero debe revisarse qué usa `Init Room from Cell`.
+
+## 6. Arquitectura prebuilt aprobada
+
+```text
+Habitación procedural común
+→ BP_RoomMaster_Dungeon
+→ HISM
+→ tamaño variable futuro
+→ RoomBounds dinámico
+```
+
+```text
+Habitación especial prebuilt
+→ BP_Room_PreBuilt_Base / Blueprint hijo
+→ DoorPoints manuales
+→ RoomBounds manual
+→ contenido visual futuro mediante Level Instance o Packed Level Blueprint
+```
+
+Los actores jugables, triggers, NPC, cofres y puertas interactivas pueden permanecer fuera del contenido puramente empaquetado.
+
+Las habitaciones debug antiguas se conservan durante la transición hasta sustituir sus referencias.
+
+## 7. Get Room Bounds Data
+
+En `BP_RoomMaster_Dungeon` ya existía:
 
 ```text
 RoomBounds
 → Get Component Bounds
-   ├ Origin     → Bounds Center
-   └ Box Extent → Bounds Extent
+→ Origin / Box Extent
 ```
 
-La habitación Start de prueba ajustó manualmente su `RoomBounds` a:
+En `BP_Room_PreBuilt_Base` se implementó igual:
 
 ```text
-Box Extent = X 980, Y 980, Z 400
-Relative Location Z = 400
+RoomBounds
+→ Get Component Bounds
+   ├ Origin      → Bounds Center
+   └ Box Extent  → Bounds Extent
 ```
 
-Resultado validado en ejecución:
+## 8. Bounds confirmados
+
+Start prebuilt de prueba:
 
 ```text
-Parent Bounds Extent = X 980, Y 980, Z 400
+Bounds Extent = X 980, Y 980, Z 400
 ```
 
-La primera hija procedural devolvió:
+Primera hija procedural:
 
 ```text
-Child Bounds Extent = X 995, Y 995, Z 420
+Bounds Extent = X 995, Y 995, Z 420
 ```
 
-## Variables locales añadidas en SpawnFirstChildRoom
+El `Box Extent` de la Start está confirmado en runtime.
+
+La posición relativa final del componente `RoomBounds` debe revisarse visualmente en una futura limpieza de la base; no asumirla solo a partir del Print de extent.
+
+## 9. Variables locales de bounds
+
+Se añadieron en `SpawnFirstChildRoom`:
 
 ```text
 Parent Bounds Center : Vector
 Parent Bounds Extent : Vector
-Child Bounds Center : Vector
-Child Bounds Extent : Vector
-bBoundsOverlap : Boolean
+Child Bounds Center  : Vector
+Child Bounds Extent  : Vector
+bBoundsOverlap       : Boolean
 ```
 
-## Comparación AABB
-
-La comprobación validada por cada eje es:
+Flujo:
 
 ```text
-X = Abs(ParentCenterX - ChildCenterX)
-    <= ParentExtentX + ChildExtentX
-
-Y = Abs(ParentCenterY - ChildCenterY)
-    <= ParentExtentY + ChildExtentY
-
-Z = Abs(ParentCenterZ - ChildCenterZ)
-    <= ParentExtentZ + ChildExtentZ
-
-bBoundsOverlap = X AND Y AND Z
+Parent Room Actor
+→ Get Room Bounds Data
+→ Set Parent Bounds Center
+→ Set Parent Bounds Extent
 ```
 
-### Error corregido
+```text
+Child Room Actor
+→ Get Room Bounds Data
+→ Set Child Bounds Center
+→ Set Child Bounds Extent
+```
 
-La primera versión colocó `ABS` antes de la resta:
+## 10. Comparación AABB
+
+Fórmula validada:
+
+```text
+OverlapX = Abs(ParentCenterX - ChildCenterX)
+           <= ParentExtentX + ChildExtentX
+
+OverlapY = Abs(ParentCenterY - ChildCenterY)
+           <= ParentExtentY + ChildExtentY
+
+OverlapZ = Abs(ParentCenterZ - ChildCenterZ)
+           <= ParentExtentZ + ChildExtentZ
+
+bBoundsOverlap = OverlapX AND OverlapY AND OverlapZ
+```
+
+## 11. Error corregido
+
+Primera versión incorrecta:
 
 ```text
 Abs(ParentCenter) - ChildCenter
 ```
 
-Eso producía un falso positivo.
-
-Se corrigió a:
+Versión correcta:
 
 ```text
 Abs(ParentCenter - ChildCenter)
 ```
 
-## Pruebas confirmadas
+El `ABS` debe ir después de la resta.
+
+## 12. Pruebas AABB
 
 Caso libre:
 
 ```text
-CorridorLength = 1000
+Offset temporal = 1000
 bBoundsOverlap = False
 ```
 
 Caso forzado de colisión:
 
 ```text
-CorridorLength = -500
+Offset temporal = -500
 bBoundsOverlap = True
 ```
 
-Después de la prueba, el valor temporal debe volver a:
+Antes de retomar:
 
 ```text
-CorridorLength = 1000
+restaurar/confirmar el literal temporal en 1000
 ```
 
-## Decisión de arquitectura
+## 13. Estado al cerrar
 
 ```text
-Habitaciones procedurales comunes
-→ BP_RoomMaster_Dungeon
-→ RoomBounds dinámico
-
-Habitaciones especiales preconstruidas
-→ BP_Room_PreBuilt_Base y Blueprints hijos
-→ contenido visual futuro mediante Level Instance o Packed Level Blueprint cuando se valide
-→ RoomBounds ajustado manualmente en cada habitación hija
+✅ Fase D.1 completada.
+✅ Fase E completada.
+✅ Separación validada en North y East.
+✅ Start prebuilt compatible con Get Room Bounds Data.
+✅ Hija procedural compatible con Get Room Bounds Data.
+✅ Caso libre y caso de colisión detectados correctamente.
+✅ SpawnedRooms.Num sigue siendo 2.
 ```
 
-Las habitaciones debug antiguas se mantienen solo durante la transición hasta sustituir todas sus referencias.
+## 14. Punto exacto para mañana — Fase F
 
-## Siguiente fase
-
-Fase F — reintentos controlados para la primera hija:
+Implementar reintentos controlados solo para:
 
 ```text
-Si bBoundsOverlap == True
-→ aumentar CorridorLength con PlacementRetryStep
-→ mover la misma Child Room Actor
-→ volver a obtener Child Bounds
+ChildIndex = 1
+```
+
+Variables previstas; confirmar nombres y tipos al crearlas:
+
+```text
+Corridor Length        : Float
+Placement Retry Step   : Float
+Placement Attempt      : Integer
+Max Placement Attempts : Integer
+```
+
+Flujo previsto:
+
+```text
+calcular posición candidata
+→ mover misma Child Room Actor
+→ obtener Child Bounds
+→ calcular bBoundsOverlap
+```
+
+Si `True`:
+
+```text
+Corridor Length += Placement Retry Step
+Placement Attempt += 1
 → repetir
+```
+
+Si `False`:
+
+```text
+aceptar posición
+→ conservar SpawnedRooms[1]
+→ terminar
+```
+
+Si alcanza el máximo:
+
+```text
+imprimir error controlado
+→ no entrar en loop infinito
 ```
 
 Reglas obligatorias:
 
 ```text
 No volver a SpawnActor.
-No repetir InitRoomFromCell.
+No repetir Init Room from Cell.
 No regenerar HISM.
-Usar MaxPlacementAttempts para evitar loops infinitos.
-Seguir trabajando solo con ChildIndex = 1.
+Mover la misma Child Room Actor.
+Mantener SpawnedRooms.Num = 2.
+Probar seed 12345 North.
+Probar seed 12346 East.
+```
+
+No hacer todavía:
+
+```text
+todas las hijas
+comparación contra todas las salas
+pasillos visuales finales
+regla de 18 habitaciones
+tamaños aleatorios completos
 ```
