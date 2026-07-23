@@ -1,28 +1,20 @@
 schema_version: 1
+last_updated: "2026-07-23"
 blueprint: "BP_DungeonGenerator_V2"
 type: "Blueprint Actor"
-component_count_confirmed: 1
+
 components:
   - name: "Scene"
     type: "Scene Component"
     certainty: "confirmed"
 
+critical_invariant: "DungeonCells[Index] = DungeonCellLinks[Index] = SpawnedRooms[Index]"
+
 functions:
   - name: "GenerateDungeon"
-    status: "confirmed"
-    responsibility: "Coordinate the full dungeon generation flow under authority."
-    stable_flow_before_parent_child_refactor:
-      - "ResetDungeon"
-      - "InitRandomStream"
-      - "CreateStartCell"
-      - "BuildDungeonLayout"
-      - "ChooseKeyAndBossCells"
-      - "SpawnRoomsFromCells"
-      - "SpawnCorridorsFromConnections"
-      - "SpawnBossRoomDoors"
-      - "DebugDrawDoorPoints"
-      - "DebugDrawDoorToDoorConnections"
-    current_temporary_refactor_flow:
+    status: "confirmed_temporary_refactor_flow"
+    current_flow:
+      - "Switch Has Authority"
       - "ResetDungeon"
       - "InitRandomStream"
       - "CreateStartCell"
@@ -30,11 +22,16 @@ functions:
       - "ChooseKeyAndBossCells"
       - "SpawnStartRoom"
       - "SpawnFirstChildRoom"
-    current_refactor_state: "Start and ChildIndex 1 are spawned; exact DoorPoint alignment validated; corridor offset pending"
+    disconnected_legacy_tail:
+      - "SpawnRoomsFromCells"
+      - "SpawnCorridorsFromConnections"
+      - "SpawnBossRoomDoors"
+      - "DebugDrawDoorPoints"
+      - "DebugDrawDoorToDoorConnections"
 
   - name: "ResetDungeon"
     status: "protected"
-    responsibility: "Destroy generated doors, corridors and rooms; clear logical arrays and reset special indices."
+    responsibility: "Destroy generated actors, clear arrays and reset special indices."
     writes:
       - "SpawnedDungeonDoors"
       - "SpawnedCorridors"
@@ -43,16 +40,9 @@ functions:
       - "DungeonCellLinks"
       - "BossCellIndex"
       - "KeyCellIndex"
-      - "BestBossDistance"
-      - "BestKeyDistance"
-
-  - name: "InitRandomStream"
-    status: "confirmed_conceptual"
-    responsibility: "Initialize RandomStream from dungeon seed configuration."
 
   - name: "CreateStartCell"
     status: "confirmed"
-    responsibility: "Create DungeonCells[0] and DungeonCellLinks[0]."
     produces:
       cell:
         GridX: 0
@@ -64,36 +54,8 @@ functions:
         DirectionFromParent: "North"
         bHasParent: false
 
-  - name: "IsCellOccupied"
-    status: "protected"
-    responsibility: "Return true when any DungeonCell matches both GridX and GridY."
-
-  - name: "GetNeighborCoord"
-    status: "protected"
-    responsibility: "Calculate logical neighbor coordinate."
-    mapping:
-      North: [0, 1]
-      East: [1, 0]
-      South: [0, -1]
-      West: [-1, 0]
-
   - name: "TryAddRandomCell"
     status: "confirmed"
-    responsibility: "Select a parent and direction, create a connected child, and append its parent link."
-    output:
-      Added: "Boolean"
-    locals:
-      - "Random Cell Index"
-      - "Selected Cell"
-      - "Random Direction Index"
-      - "Selected Direction"
-      - "Neighbor X"
-      - "Neighbor Y"
-      - "New Room Seed"
-      - "Updated Selected Cell"
-      - "New Base Cell"
-      - "Opposite Direction"
-      - "New Connected Cell"
     child_link:
       ParentCellIndex: "Random Cell Index"
       DirectionFromParent: "Selected Direction"
@@ -105,110 +67,104 @@ functions:
 
   - name: "BuildDungeonLayout"
     status: "protected"
-    responsibility: "Call TryAddRandomCell until MaxRooms or MaxGenerationAttempts."
-
-  - name: "SpawnRoomsFromCells"
-    status: "legacy_grid_spawn_pending_replacement"
-    responsibility: "Spawn all rooms using Grid*CellSize."
-    known_flow:
-      - "ForEach DungeonCells"
-      - "Break ST_DungeonCell"
-      - "GridX * CellSize"
-      - "GridY * CellSize"
-      - "Make Vector"
-      - "Make Transform"
-      - "Switch on E_DungeonRoomType"
-      - "Set Selected Room Class"
-      - "SpawnActor"
-      - "InitRoomFromCell"
-      - "Add SpawnedRooms"
-    room_classes:
-      Start: "Start room class visible in switch branch"
-      Normal: "DebugRoomClass"
-      Key: "KeyDebugRoomClass"
-      Boss: "BossDebugRoomClass"
-    collision_handling: "Default"
-    exact_graph_visible: true
 
   - name: "SpawnStartRoom"
     status: "confirmed"
-    responsibility: "Spawn, initialize and store only DungeonCells[0] as SpawnedRooms[0]."
-    inputs: []
-    outputs: []
+    responsibility: "Spawn, initialize and store DungeonCells[0] as SpawnedRooms[0]."
     validations:
       - "DungeonCells.IsValidIndex(0)"
       - "DungeonCells[0].RoomType == Start"
-      - "SpawnActor Return Value is valid"
+      - "SpawnActor Return Value valid"
     transform:
       location: "BP_DungeonGenerator_V2.GetActorLocation"
       rotation: [0, 0, 0]
       scale: [1, 1, 1]
-    class: "Start Room Class / StartDebugRoomClass"
+    class_current_test: "BP_Room_PreBuilt_Base"
     collision_handling: "Default"
-    initialization:
-      target: "SpawnActor Return Value"
-      cell_data: "DungeonCells[0]"
-      interface_call: "Init Room from Cell"
-    writes:
-      - "SpawnedRooms"
-    expected_result:
-      spawned_rooms_num: 1
-      stored_index: 0
-    test_status:
-      compiles: true
-      isolated_test_passed: true
-      only_start_spawned: true
-      start_one_opening: true
-    protected_rules:
-      - "Scale Z must be 1"
-      - "Validate actor before InitRoomFromCell and Add"
-      - "InitRoomFromCell only once"
-      - "Start remains SpawnedRooms[0]"
+    initialization: "Init Room from Cell with DungeonCells[0], exactly once"
+    array_result:
+      array: "SpawnedRooms"
+      index: 0
 
   - name: "SpawnFirstChildRoom"
-    status: "confirmed_exact_alignment"
-    responsibility: "Spawn and align only DungeonCells[1] using DungeonCellLinks[1] and its already-spawned parent."
-    inputs: []
-    outputs: []
+    status: "corridor_offset_and_parent_aabb_confirmed"
+    responsibility: "Spawn, initialize, position and validate only DungeonCells[1]."
     child_index: 1
     validations:
       - "DungeonCells.IsValidIndex(1)"
       - "DungeonCellLinks.IsValidIndex(1)"
       - "DungeonCellLinks[1].bHasParent == true"
       - "SpawnedRooms.IsValidIndex(ParentCellIndex)"
-      - "Parent room actor valid"
-      - "Child room actor valid"
-    locals:
-      Parent_Room_Actor: "Actor Object Reference, not array"
-      Child_Room_Actor: "Actor Object Reference, not array"
+      - "Parent Room Actor valid"
+      - "Child Room Actor valid"
+    locals_confirmed:
+      Parent_Room_Actor: "Actor Object Reference"
+      Child_Room_Actor: "Actor Object Reference"
       Child_Entry_Direction: "E_DungeonDirection"
+      Parent_Direction: "E_DungeonDirection"
       Parent_Door_Location: "Vector"
       Child_Door_Location: "Vector"
+      Parent_Bounds_Center: "Vector"
+      Parent_Bounds_Extent: "Vector"
+      Child_Bounds_Center: "Vector"
+      Child_Bounds_Extent: "Vector"
+      bBoundsOverlap: "Boolean"
     parent_source: "SpawnedRooms[DungeonCellLinks[1].ParentCellIndex]"
-    child_class_source: "Switch DungeonCells[1].RoomType: Normal, Key or Boss"
+    parent_direction_source: "DungeonCellLinks[1].DirectionFromParent"
+    child_entry_direction: "GetOppositeDirection(DirectionFromParent)"
     child_spawn:
       temporary_location: "BP_DungeonGenerator_V2.GetActorLocation"
       collision_handling: "Always Spawn, Ignore Collisions"
-      initialization: "InitRoomFromCell(DungeonCells[1]) exactly once"
-    direction_logic:
-      parent_direction: "DungeonCellLinks[1].DirectionFromParent"
-      child_entry_direction: "GetOppositeDirection(DirectionFromParent)"
+      initialization: "Init Room from Cell with DungeonCells[1], exactly once"
     door_queries:
-      parent: "GetDoorWorldLocation(ParentRoomActor, DirectionFromParent)"
-      child: "GetDoorWorldLocation(ChildRoomActor, ChildEntryDirection)"
-    exact_alignment:
-      move_delta: "ParentDoorLocation - ChildDoorLocation"
-      new_location: "ChildRoomActor.GetActorLocation + MoveDelta"
-      movement: "SetActorLocation on same ChildRoomActor reference"
-      measured_door_error: 0.0
+      parent: "Get Door World Location(Parent Room Actor, Parent Direction)"
+      child: "Get Door World Location(Child Room Actor, Child Entry Direction)"
+    corridor_offset:
+      current_literal: 1000.0
+      formal_corridor_length_variable: false
+      desired_child_door: "Parent Door Location + GetDirectionVector(Parent Direction) * 1000"
+      move_delta: "Desired Child Door - Child Door Location"
+      new_location: "Child Room Actor.GetActorLocation + Move Delta"
+      movement: "Set Actor Location on same Child Room Actor"
+    separation_tests:
+      - seed: 12345
+        direction: "North"
+        distance: 1000.0
+        spawned_rooms_num: 2
+      - seed: 12346
+        direction: "East"
+        distance: 1000.0
+        spawned_rooms_num: 2
+    bounds_queries:
+      parent:
+        target: "Parent Room Actor"
+        center_to: "Parent Bounds Center"
+        extent_to: "Parent Bounds Extent"
+      child:
+        target: "Child Room Actor"
+        center_to: "Child Bounds Center"
+        extent_to: "Child Bounds Extent"
+    aabb_overlap:
+      x: "Abs(ParentBoundsCenterX - ChildBoundsCenterX) <= ParentBoundsExtentX + ChildBoundsExtentX"
+      y: "Abs(ParentBoundsCenterY - ChildBoundsCenterY) <= ParentBoundsExtentY + ChildBoundsExtentY"
+      z: "Abs(ParentBoundsCenterZ - ChildBoundsCenterZ) <= ParentBoundsExtentZ + ChildBoundsExtentZ"
+      final: "X AND Y AND Z -> Set bBoundsOverlap"
+      corrected_bug:
+        wrong: "Abs(Parent Center) - Child Center"
+        correct: "Abs(Parent Center - Child Center)"
+      tests:
+        free:
+          offset_literal: 1000.0
+          result: false
+        forced_overlap:
+          offset_literal: -500.0
+          result: true
     array_result:
-      target: "SpawnedRooms"
-      stored_index: 1
+      array: "SpawnedRooms"
+      index: 1
       validated_num: 2
-    corrected_measurement_bug:
-      incorrect_result: 2950
-      cause: "Child door was compared against actor location/center"
-      correct_measurement: "Distance(ChildDoorAfterMove, ParentDoorLocation)"
+    preflight_next_session:
+      - "Restore offset literal to 1000 after forced -500 test"
 
   - name: "GetOppositeDirection"
     status: "protected"
@@ -220,11 +176,11 @@ functions:
       West: "East"
 
   - name: "GetDirectionVector"
-    status: "created_mapping_confirmed_pure_pending"
-    responsibility: "Convert E_DungeonDirection to a unit world-space XY vector."
-    inputs:
+    status: "confirmed"
+    pure: true
+    input:
       Direction: "E_DungeonDirection"
-    outputs:
+    output:
       Direction_Vector: "Vector"
     implementation: "Select indexed by Direction"
     mapping:
@@ -232,70 +188,75 @@ functions:
       East: [1, 0, 0]
       South: [0, -1, 0]
       West: [-1, 0, 0]
-    pure_confirmed: false
-    note: "Final screenshot still shows execution pins"
 
-  - name: "SetConnectionOnCell"
+  - name: "GetNeighborCoord"
     status: "protected"
-    inputs:
-      In_Cell: "ST_DungeonCell"
-      Direction: "E_DungeonDirection"
-    outputs:
-      Out_Cell: "ST_DungeonCell"
-    modifies_array_directly: false
+    mapping:
+      North: [0, 1]
+      East: [1, 0]
+      South: [0, -1]
+      West: [-1, 0]
 
-  - name: "DebugPrintLayout"
-    status: "confirmed"
-    responsibility: "Print cell coordinates, connections and RoomType when bDebugDungeon is true."
-
-  - name: "DebugDrawConnections"
-    status: "confirmed_conceptual"
-    responsibility: "Draw lines between logically connected cells."
-
-  - name: "DebugDrawDoorPoints"
-    status: "confirmed_conceptual"
-    responsibility: "Draw active door points on spawned rooms."
+  - name: "IsCellOccupied"
+    status: "protected"
 
   - name: "FindCellIndexByCoord"
     status: "protected"
-    responsibility: "Return matching DungeonCells index or -1."
 
-  - name: "DebugDrawDoorToDoorConnections"
-    status: "confirmed_conceptual"
-    responsibility: "Draw lines between real connected room DoorPoints."
-
-  - name: "SpawnCorridorsFromConnections"
+  - name: "SetConnectionOnCell"
     status: "protected"
-    responsibility: "Spawn one corridor per logical connection using real DoorPoints."
-    processed_directions: ["North", "East"]
 
   - name: "ChooseKeyAndBossCells"
     status: "protected"
-    responsibility: "Choose terminal Boss and exploration Key cells."
-    boss_rule: "Non-Start dead-end with maximum Manhattan distance from origin."
-    key_rule: "Non-Start, non-Boss, DistanceFromStart>=3, maximum DistanceFromBoss*DistanceFromStart."
+
+  - name: "SpawnCorridorsFromConnections"
+    status: "protected"
+    processed_directions: ["North", "East"]
 
   - name: "SpawnBossRoomDoors"
     status: "protected"
-    responsibility: "Spawn a Boss Door on each active Boss connection, normally one."
 
-  - name: "SpawnDoorAtRoomDirection"
-    status: "protected"
-    inputs:
-      RoomActor: "Actor Reference"
-      Direction: "E_DungeonDirection"
-    responsibility: "Get room DoorWorldLocation, select yaw, spawn BossDoorClass, store reference."
+phase_f:
+  status: "next"
+  scope:
+    child_index: 1
+    compare_against: "Parent Room Actor only"
+  variables_planned:
+    Corridor_Length: "Float, create/confirm"
+    Placement_Retry_Step: "Float, create/confirm"
+    Placement_Attempt: "Integer, create/confirm"
+    Max_Placement_Attempts: "Integer, create/confirm"
+  flow:
+    - "Calculate candidate Desired Child Door"
+    - "Move same Child Room Actor"
+    - "Query Child Bounds again"
+    - "Calculate bBoundsOverlap"
+    - "If true, increase corridor length and attempt count"
+    - "Repeat until false or max attempts"
+  rules:
+    - "Do not SpawnActor again"
+    - "Do not Init Room from Cell again"
+    - "Do not regenerate HISM"
+    - "Keep SpawnedRooms.Num == 2"
 
 future_functions:
   - name: "PlaceChildRoomFromParent"
-    status: "future_after_single_child_prototype"
-  - name: "SpawnRemainingRoomsFromParents"
-    status: "future"
+    status: "future_after_retry_prototype"
   - name: "DoesRoomOverlapPlacedRooms"
+    status: "future_after_parent_only_test"
+  - name: "SpawnRemainingRoomsFromParents"
     status: "future"
   - name: "ValidateDungeonData"
     status: "future_optional"
 
-next_formula:
-  desired_child_door: "ParentDoorLocation + GetDirectionVector(DirectionFromParent) * CorridorLength"
-  move_delta: "DesiredChildDoor - ChildDoorLocation"
+protected_mappings:
+  init_room_from_cell:
+    North: "SouthOpening"
+    East: "WestOpening"
+    South: "NorthOpening"
+    West: "EastOpening"
+  get_door_world_location:
+    North: "Arrow_Entrance_South"
+    East: "Arrow_Exit_East"
+    South: "Arrow_Exit_North"
+    West: "Arrow_Exit_West"
