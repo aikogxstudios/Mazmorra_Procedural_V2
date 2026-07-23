@@ -1,5 +1,7 @@
 # 13 — Roadmap de implementación
 
+**Última actualización:** 2026-07-23
+
 ## Estado de fases
 
 ### Fase A — DungeonCellLinks
@@ -8,19 +10,19 @@
 ✅ ST_DungeonCellLink creado.
 ✅ DungeonCellLinks creado.
 ✅ CreateStartCell añade link 0.
-✅ TryAddRandomCell añade link por cada hija.
+✅ TryAddRandomCell añade un link por cada hija.
 ✅ ParentCellIndex = Random Cell Index.
 ✅ DirectionFromParent = Selected Direction.
 ✅ bHasParent=true para hijas.
-✅ Cantidades validadas hasta 150 salas.
-✅ Contenido básico de links validado.
+✅ Cantidades validadas con 10, 15, 20, 50 y 150 salas.
+✅ ParentCellIndex válido y menor que ChildIndex.
 ```
 
 ### Fase B — Start con una sola salida
 
 ```text
 ✅ Implementada en TryAddRandomCell.
-✅ Comprueba las cuatro conexiones.
+✅ Comprueba North, East, South y West.
 ✅ Devuelve Added=false si Start ya tiene una salida.
 ✅ Validada con 10, 15, 20, 50 y 150 salas.
 ```
@@ -28,107 +30,142 @@
 ### Fase C — SpawnStartRoom
 
 ```text
-✅ Función creada.
+✅ Función creada y compilada.
 ✅ DungeonCells[0] validada.
 ✅ RoomType Start validado.
-✅ Usa la clase Start.
-✅ Usa GetActorLocation del generador como origen.
 ✅ SpawnActor validado.
-✅ InitRoomFromCell ejecutado.
+✅ InitRoomFromCell ejecutado una sola vez.
 ✅ Actor añadido como SpawnedRooms[0].
-✅ Prueba aislada: SpawnedRooms.Num == 1.
+✅ Prueba aislada SpawnedRooms.Num == 1.
 ✅ Start conserva una sola apertura.
 ```
 
-Fase cerrada el 2026-07-21.
-
-### Fase D — Una sola hija alineada
+### Fase D — Primera hija alineada
 
 ```text
 ✅ SpawnFirstChildRoom creada.
-✅ ChildIndex = 1.
-✅ DungeonCells[1] validada.
-✅ DungeonCellLinks[1] validada.
-✅ bHasParent=true validado.
-✅ ParentCellIndex resuelto.
+✅ Trabaja con ChildIndex = 1.
+✅ Link padre validado.
 ✅ Parent Room Actor obtenido desde SpawnedRooms.
 ✅ Hija spawneada e inicializada una sola vez.
-✅ ChildEntryDirection opuesta calculada.
+✅ Child Entry Direction opuesta calculada.
 ✅ ParentDoor y ChildDoor obtenidos por interfaz.
 ✅ Misma hija movida sin regenerar HISM.
 ✅ Añadida como SpawnedRooms[1].
 ✅ SpawnedRooms.Num == 2.
-✅ Error de alineación final = 0.0.
+✅ Error de alineación base = 0.0.
 ```
 
-La prueba base sin separación de pasillo queda validada.
-
 ### Fase D.1 — Separación inicial para pasillo
+
+```text
+✅ GetDirectionVector convertida en Pure.
+✅ Mapping North/East/South/West confirmado.
+✅ Parent Direction guardada desde Direction From Parent.
+✅ DesiredChildDoor calculada con offset temporal 1000.
+✅ La misma hija se mueve sin regenerarse.
+✅ Distance entre DoorPoints = 1000.
+✅ Seed 12345 validada en North.
+✅ Seed 12346 validada en East.
+✅ SpawnedRooms.Num sigue siendo 2.
+```
+
+Nota:
+
+```text
+1000 es todavía un literal temporal del nodo Vector * Float.
+La variable formal Corridor Length queda para la Fase F.
+```
+
+### Fase E — RoomBounds y solapamiento
+
+```text
+✅ Get Room Bounds Data revisada en BP_RoomMaster_Dungeon.
+✅ BP_Room_PreBuilt_Base creada/adaptada.
+✅ Get Room Bounds Data implementada en la base prebuilt.
+✅ Start prebuilt devuelve Bounds Extent 980,980,400.
+✅ Primera hija procedural devuelve Bounds Extent 995,995,420.
+✅ Variables locales de center/extent para padre e hija creadas.
+✅ Comparación AABB implementada en X, Y y Z.
+✅ bBoundsOverlap creada.
+✅ Caso libre con 1000 devuelve False.
+✅ Caso forzado con -500 devuelve True.
+✅ Error ABS corregido: Abs(ParentCenter - ChildCenter).
+```
+
+Documentos:
+
+```text
+docs/28_ROOM_BOUNDS_FIRST_CHILD.md
+sessions/2026-07-23_ROOM_BOUNDS_VALIDATED.md
+```
+
+### Fase F — Reintentos controlados
 
 ```text
 ⏳ Próxima fase inmediata.
 ```
 
-Ya creado:
+Alcance inicial:
 
 ```text
-✅ GetDirectionVector.
-✅ North → (0,1,0).
-✅ East → (1,0,0).
-✅ South → (0,-1,0).
-✅ West → (-1,0,0).
+Solo ChildIndex = 1.
+Solo comparar contra Parent Room Actor.
+Mover siempre la misma Child Room Actor.
 ```
 
-Pendiente:
+Flujo previsto:
 
 ```text
-Confirmar/activar Pure en GetDirectionVector.
-Definir CorridorLength de prueba.
-DesiredChildDoor = ParentDoor + DirectionVector * CorridorLength.
-Mover la misma hija.
-Comprobar DoorDistance == CorridorLength.
-Probar al menos dos direcciones.
+Calcular posición candidata
+→ SetActorLocation
+→ Get Room Bounds Data
+→ calcular bBoundsOverlap
 ```
 
-### Fase E — Bounds
+Si `bBoundsOverlap == true`:
 
 ```text
-⏳ Pendiente.
-```
-
-Objetivo:
-
-```text
-GetRoomBoundsData
-→ comparar hija con salas aceptadas
-```
-
-No basta con alinear puertas: el sistema solo aceptará una sala cuando su `RoomBounds` no invada ninguna habitación colocada anteriormente.
-
-### Fase F — Reintentos
-
-```text
-⏳ Pendiente.
-```
-
-Objetivo:
-
-```text
-si hay choque
-→ CorridorLength += PlacementRetryStep
-→ mover misma hija
+Corridor Length += Placement Retry Step
+→ Placement Attempt += 1
+→ recalcular posición
+→ mover la misma hija
 → repetir
 ```
 
-Reglas:
+Si `bBoundsOverlap == false`:
 
 ```text
-No regenerar la habitación.
-No repetir InitRoomFromCell.
-Límite de intentos obligatorio.
+aceptar posición
+→ conservar SpawnedRooms[1]
+→ terminar
 ```
 
-### Fase G — Todas las hijas
+Variables previstas; confirmar al crearlas:
+
+```text
+Corridor Length        : Float
+Placement Retry Step   : Float
+Placement Attempt      : Integer
+Max Placement Attempts : Integer
+```
+
+Criterios de aceptación:
+
+```text
+[ ] Una colisión inicial provoca al menos un reintento.
+[ ] Corridor Length aumenta de forma controlada.
+[ ] La hija termina en posición libre.
+[ ] No se llama otra vez a SpawnActor.
+[ ] No se repite Init Room from Cell.
+[ ] No se regenera HISM.
+[ ] El loop termina por éxito o Max Placement Attempts.
+[ ] SpawnedRooms.Num permanece en 2.
+[ ] Validar North con seed 12345.
+[ ] Validar East con seed 12346.
+```
+
+### Fase G — Comparar contra todas las salas aceptadas
 
 ```text
 ⏳ Pendiente.
@@ -137,6 +174,24 @@ Límite de intentos obligatorio.
 Objetivo:
 
 ```text
+DoesRoomOverlapPlacedRooms
+→ recorrer SpawnedRooms ya aceptadas
+→ ignorar la propia hija
+→ rechazar si solapa cualquiera
+```
+
+Todavía no implementar junto con la Fase F.
+
+### Fase H — Todas las hijas
+
+```text
+⏳ Pendiente.
+```
+
+Objetivo previsto:
+
+```text
+PlaceChildRoomFromParent
 SpawnRemainingRoomsFromParents
 ```
 
@@ -150,215 +205,94 @@ DungeonCellLinks[Index]
 SpawnedRooms[Index]
 ```
 
-### Fase H — Pasillos variables
+### Fase I — Pasillos variables visuales
 
 ```text
 ⏳ Pendiente.
 ```
 
-Objetivo:
+El placement decide primero la distancia física válida. Después el sistema de pasillos conecta los DoorPoints reales.
 
-```text
-pasillo corto/medio/largo
-```
-
-El sistema de colocación decidirá primero la distancia física válida. Después `SpawnCorridorsFromConnections` o su adaptación visual conectará los DoorPoints reales.
-
-### Fase I — Regresión completa
+### Fase J — Regresión completa
 
 ```text
 ⏳ Pendiente.
 ```
 
-Objetivo:
+Incluye:
 
-- Key/Boss;
-- Boss Door;
-- pickup;
-- inventario;
-- regeneración;
-- layouts grandes;
-- rendimiento;
-- varias seeds.
+```text
+Key/Boss
+Boss Door
+pickup e inventario temporal
+regeneración
+layouts grandes
+varias seeds
+rendimiento
+```
+
+## Arquitectura híbrida aprobada
+
+```text
+Habitaciones normales/procedurales
+→ BP_RoomMaster_Dungeon
+→ HISM
+→ tamaño variable futuro
+→ RoomBounds dinámico
+```
+
+```text
+Habitaciones especiales preconstruidas
+→ BP_Room_PreBuilt_Base y Blueprints hijos
+→ RoomBounds ajustado manualmente
+→ DoorPoints ajustados manualmente
+→ Level Instance o Packed Level Blueprint para contenido visual cuando se valide
+```
+
+Las habitaciones debug antiguas se mantienen únicamente durante la transición hasta sustituir sus referencias.
 
 ## Regla de cantidad V1
 
-Aprobada conceptualmente, todavía no implementada:
+Aprobada conceptualmente, no implementada todavía:
 
 ```text
-15 habitaciones normales/procedurales
+15 normales/procedurales
 + 1 Start
 + 1 Key
 + 1 Boss
 = 18 habitaciones físicas
 ```
 
-Start, Key y Boss no consumen el contador de 15 normales, pero permanecen dentro de los arrays y conservan sus índices.
-
-## Próximo paso exacto
-
-### 1. Confirmar GetDirectionVector
-
-En la captura final el mapping es correcto, pero todavía aparecen pines blancos de ejecución.
-
-```text
-Abrir GetDirectionVector
-→ confirmar o activar Pure
-→ compilar
-```
-
-### 2. Elegir longitud de prueba
-
-No fijar todavía el valor definitivo de producción. Usar un valor temporal coherente con el tamaño actual de las salas y baldosas.
-
-Nombre pendiente de confirmar al crearlo en Blueprint:
-
-```text
-CorridorLength
-```
-
-### 3. Calcular puerta deseada
-
-```text
-DirectionVector = GetDirectionVector(DirectionFromParent)
-Offset = DirectionVector * CorridorLength
-DesiredChildDoor = ParentDoorLocation + Offset
-```
-
-### 4. Mover la hija
-
-Sustituir solo la resta actual:
-
-```text
-Antes:
-MoveDelta = ParentDoorLocation - ChildDoorLocation
-
-Después:
-MoveDelta = DesiredChildDoor - ChildDoorLocation
-```
-
-Mantener:
-
-```text
-NewChildLocation = ChildRoomActor.GetActorLocation + MoveDelta
-SetActorLocation sobre la misma referencia
-```
-
-### 5. Validación
-
-```text
-SpawnedRooms.Num == 2
-SpawnedRooms[0] = Start
-SpawnedRooms[1] = primera hija
-Distance(ParentDoor, ChildDoorAfterMove) == CorridorLength
-```
-
-Probar al menos dos `DirectionFromParent` distintos.
-
-## Funciones creadas durante el refactor
+## Funciones confirmadas durante el refactor
 
 ```text
 SpawnStartRoom
 SpawnFirstChildRoom
 GetDirectionVector
+GetOppositeDirection Pure
 ```
 
 ## Funciones futuras previstas
 
 ```text
 PlaceChildRoomFromParent
-SpawnRemainingRoomsFromParents
 DoesRoomOverlapPlacedRooms
+SpawnRemainingRoomsFromParents
+ValidateDungeonData (opcional)
 ```
 
-Posible futura:
-
-```text
-ValidateDungeonData
-```
-
-No crear todas juntas.
-
-## Variables futuras previstas
-
-```text
-MinCorridorLength
-MaxInitialCorridorLength
-PlacementRetryStep
-MaxPlacementAttempts
-RoomPlacementPadding
-```
-
-Los nombres y valores se confirman al implementarlas.
-
-## Después de la colocación
-
-Solo cuando el sistema físico esté estable:
-
-```text
-contenido de salas
-→ nuevas RoomTypes
-→ eventos
-→ decoración
-→ pasillos visuales finales
-→ optimización medida
-```
-
-## Futuro reservado
-
-### Habitaciones opcionales
-
-```text
-Treasure
-Safe
-Shop
-Challenge
-Secret
-Elite
-Event
-Storage
-Trade
-Puzzle
-```
-
-### Puertas avanzadas
-
-```text
-DoorType
-RequiredKeyID
-DoorGroupID
-bConsumesKey
-bOpensWholeGroup
-bOptional
-```
-
-### Seeds completas
-
-```text
-Una misma seed debe reproducir:
-layout
-tipos
-tamaños
-longitudes iniciales
-contenido procedural
-```
-
-### Sistema híbrido
-
-```text
-Procedural común → BP_RoomMaster_Dungeon + HISM
-Prebuilt especial → Blueprint Actor o Level Instance si se justifica
-```
+No crear todas a la vez.
 
 ## Fuera de alcance actual
 
 ```text
-❌ Conexión pared con pared.
+❌ Todas las hijas en la misma fase.
+❌ Comparación global antes de cerrar reintentos de ChildIndex 1.
+❌ Pasillos visuales finales.
+❌ Regla final de 18 habitaciones.
+❌ Nuevas RoomTypes.
+❌ Decoración definitiva.
 ❌ Migración total a Level Instances.
-❌ Refactor grande de Child Actors.
-❌ Decoración final.
-❌ Inventario definitivo.
-❌ Nuevos tipos antes de estabilizar placement.
 ```
 
 ## Regla de avance
@@ -366,10 +300,10 @@ Prebuilt especial → Blueprint Actor o Level Instance si se justifica
 ```text
 Una fase
 → compilar
-→ prueba pequeña
-→ prueba media
-→ prueba grande
-→ varias seeds
+→ prueba controlada
+→ caso positivo
+→ caso negativo
+→ varias seeds/direcciones
 → documentar
 → siguiente fase
 ```
