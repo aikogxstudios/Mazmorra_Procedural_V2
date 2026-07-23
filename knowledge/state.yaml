@@ -16,8 +16,8 @@ certainty_legend:
   protected: "🛑"
 
 truth_priority:
-  - "docs/00_ESTADO_ACTUAL.md"
   - "Current Unreal Engine captures and tests"
+  - "docs/00_ESTADO_ACTUAL.md"
   - "Structured repository documentation"
   - "Historical documentation"
 
@@ -245,6 +245,29 @@ approved_v1_room_count:
   key_rooms: 1
   boss_rooms: 1
   total_physical_rooms: 18
+
+external_review_2026_07_23:
+  source: "Codex opinion requested by the user after read-only repository review"
+  document: "docs/30_REVISION_EXTERNA_CODEX.md"
+  authority: "external_recommendation_not_source_of_truth"
+  changes_current_phase: false
+  current_phase_remains: "Phase F - Controlled placement retries for ChildIndex 1"
+  accepted_future_backlog:
+    - "Validate corridor volumes against accepted rooms after full room placement is stable"
+    - "Evaluate BFS graph distance for Boss and Key after physical placement and regression"
+    - "Complete end-to-end determinism across graph, room types, sizes, offsets, content and final positions"
+    - "Add automated invariant checks after full physical placement exists"
+    - "Add screenshots, visual evidence and diagrams gradually for verification and portfolio"
+    - "Consider automated documentation consistency checks without blocking Blueprint development"
+  deferred_until_measured:
+    - "Maintain a frontier list of cells with free exits"
+    - "Refactor TryAddRandomCell or BuildDungeonLayout for efficiency"
+  protected_no_immediate_change:
+    - "ChooseKeyAndBossCells"
+    - "TryAddRandomCell"
+    - "BuildDungeonLayout"
+    - "Critical direction and DoorPoint mappings"
+    - "SpawnCorridorsFromConnections"
 
 memory_policy:
   repository_is_official_memory: true
