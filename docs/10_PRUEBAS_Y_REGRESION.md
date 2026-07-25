@@ -1,216 +1,233 @@
 # 10 — Pruebas y regresión
 
-**Última actualización:** 2026-07-23
+**Última actualización:** 2026-07-25
 
-Este archivo reúne las pruebas que deben repetirse después de cambios importantes.
+Este archivo reúne las pruebas obligatorias después de cambios importantes.
 
 ## 1. Layout lógico
 
-- [x] Genera 10 habitaciones.
-- [x] Genera 15 habitaciones.
-- [x] Genera 20 habitaciones.
-- [x] Genera 50 habitaciones.
-- [x] Genera 150 habitaciones.
+- [x] Genera 10, 15, 20, 50 y 150 celdas históricamente.
 - [x] Start mantiene una sola salida.
-- [ ] Probar muchas seeds con el mismo tamaño.
-- [ ] Confirmar determinismo completo de layout, tamaños y longitudes.
-- [ ] No hay dos celdas con el mismo `GridX/GridY`.
-- [ ] Cada conexión lógica existe en ambos lados.
-- [ ] Boss es dead-end cuando existe candidato.
-- [ ] Key no es Start ni Boss.
-
-## 2. DungeonCellLinks
-
-- [x] `DungeonCells.Num == DungeonCellLinks.Num` con 10.
-- [x] `DungeonCells.Num == DungeonCellLinks.Num` con 15.
-- [x] `DungeonCells.Num == DungeonCellLinks.Num` con 20.
-- [x] `DungeonCells.Num == DungeonCellLinks.Num` con 50.
-- [x] `DungeonCells.Num == DungeonCellLinks.Num` con 150.
-- [x] Link 0: `ParentCellIndex=-1`.
-- [x] Link 0: `bHasParent=false`.
-- [x] Links > 0: `bHasParent=true`.
-- [x] `ParentCellIndex >= 0` para hijas.
+- [x] `DungeonCells.Num == DungeonCellLinks.Num`.
+- [x] Link 0 usa `ParentCellIndex=-1` y `bHasParent=false`.
+- [x] Hijas usan `bHasParent=true`.
 - [x] `ParentCellIndex < ChildIndex`.
-- [x] `DirectionFromParent` recibe `Selected Direction`.
-- [ ] Validación automática de conexión simétrica padre-hija.
+- [ ] Probar muchas seeds con el mismo tamaño.
+- [ ] Confirmar determinismo completo.
+- [ ] Automatizar validación de coordenadas únicas.
+- [ ] Automatizar conexión simétrica padre-hija.
+
+## 2. Max Rooms
+
+Regla actual:
+
+```text
+Max Rooms = habitaciones Normal
+```
+
+- [x] `BuildDungeonLayout` usa `Max Rooms + 1` para incluir Start.
+- [x] `Max Rooms=10` genera 1 Start + 10 Normal antes de especiales.
+- [x] Key no consume `Max Rooms`.
+- [x] Boss no consume `Max Rooms`.
+- [x] Resultado final actual con 10: 13 habitaciones.
 
 ## 3. SpawnStartRoom
 
-- [x] `DungeonCells.IsValidIndex(0)`.
-- [x] `DungeonCells[0].RoomType == Start`.
-- [x] Clase Start conectada a `SpawnActor`.
+- [x] Valida `DungeonCells[0]`.
+- [x] Comprueba `RoomType == Start`.
 - [x] Transform con escala `1,1,1`.
-- [x] Return Value validado.
-- [x] `InitRoomFromCell(DungeonCells[0])` una sola vez.
-- [x] `SpawnedRooms.Num == 1` en prueba aislada.
-- [x] `SpawnedRooms[0]` válido.
-- [x] Start con una apertura.
-- [x] Mensajes de diagnóstico para índice, tipo y spawn.
+- [x] Valida `SpawnActor Return Value`.
+- [x] Ejecuta `InitRoomFromCell` una sola vez.
+- [x] Añade `SpawnedRooms[0]`.
 
-## 4. Primera hija padre-hija
+## 4. PlaceChildRoomFromParent
 
-- [x] `DungeonCells.IsValidIndex(1)`.
-- [x] `DungeonCellLinks.IsValidIndex(1)`.
-- [x] `bHasParent == true`.
-- [x] `ParentCellIndex` válido.
-- [x] `SpawnedRooms.IsValidIndex(ParentCellIndex)`.
-- [x] Parent Room Actor válido.
-- [x] Child Room Actor válido.
-- [x] Hija generada una sola vez.
-- [x] `InitRoomFromCell(DungeonCells[1])` una sola vez.
-- [x] `Child Entry Direction = GetOppositeDirection(Direction From Parent)`.
-- [x] ParentDoor usa `Direction From Parent`.
+- [x] Input `Child Index : Integer`.
+- [x] Output `Room Placed : Boolean`.
+- [x] Valida `DungeonCells[Child Index]`.
+- [x] Valida `DungeonCellLinks[Child Index]`.
+- [x] Comprueba `bHasParent`.
+- [x] Resuelve `Parent Cell Index`.
+- [x] Resuelve padre desde `SpawnedRooms`.
+- [x] Selecciona clase Normal/Key/Boss.
+- [x] Rechaza Start como hija.
+- [x] Genera el actor una sola vez.
+- [x] Inicializa una sola vez.
+- [x] Mueve la misma referencia.
+- [x] Añade a `SpawnedRooms` solo después del éxito.
+- [x] Destruye la candidata al fallar.
+
+## 5. Direcciones
+
+- [x] `Child Entry Direction = GetOppositeDirection(Parent Direction)`.
+- [x] ParentDoor usa `Parent Direction`.
 - [x] ChildDoor usa `Child Entry Direction`.
-- [x] Misma referencia movida con `SetActorLocation`.
-- [x] `SpawnedRooms.Num == 2`.
-- [x] `SpawnedRooms[0] = Start`.
-- [x] `SpawnedRooms[1] = primera hija`.
-- [x] Alineación base sin pasillo: distancia `0.0`.
-- [x] Error de medición `2950` diagnosticado y corregido.
-
-## 5. GetDirectionVector
-
-- [x] Función creada.
-- [x] Función Pure confirmada.
+- [x] `GetDirectionVector` es Pure.
 - [x] North = `(0,1,0)`.
 - [x] East = `(1,0,0)`.
 - [x] South = `(0,-1,0)`.
 - [x] West = `(-1,0,0)`.
-- [x] Usa `Parent Direction`, no `Child Entry Direction`, para separar la hija.
+- [x] Corrección actual: seed 12345 → South.
+- [x] Seed 12346 → East.
 
-## 6. Separación inicial de pasillo
+## 6. Separación y reintentos
 
-- [x] `Parent Direction` guardada desde `Direction From Parent`.
-- [x] `DesiredChildDoor = ParentDoor + DirectionVector * 1000`.
-- [x] `MoveDelta = DesiredChildDoor - ChildDoorLocation`.
-- [x] Se mueve la misma Child Room Actor.
+Valores de prueba:
+
+```text
+Corridor Length = 1000
+Placement Retry Step = 500
+Max Placement Attempts = 10
+```
+
+- [x] `Corridor Length` existe como Float.
+- [x] `Placement Retry Step` existe como Float.
+- [x] `Placement Attempt` existe como Integer.
+- [x] `Max Placement Attempts` existe como Integer.
+- [x] `bPlacement Succeeded` existe como Boolean.
+- [x] El loop usa `Max Placement Attempts - 1`.
+- [x] Una colisión aumenta `Corridor Length`.
+- [x] Cada intento vuelve a consultar `Child Door Location`.
 - [x] No se repite `SpawnActor`.
 - [x] No se repite `InitRoomFromCell`.
 - [x] No se regenera HISM.
-- [x] Seed 12345 → North → distancia 1000.
-- [x] Seed 12346 → East → distancia 1000.
-- [x] `SpawnedRooms.Num == 2` en ambas.
-- [ ] Crear variable formal `Corridor Length`; ahora 1000 es literal temporal.
+- [x] Caso libre termina sin FAILED.
+- [x] Caso forzado termina con `Max Placement Attempts reached`.
+- [x] Caso forzado destruye el actor.
 
-## 7. BP_Room_PreBuilt_Base
+## 7. DoesRoomOverlapPlacedRooms
 
-- [x] Base creada/adaptada.
-- [x] Implementa `BPI_DungeonRoomV2`.
-- [x] Tiene DoorPoint North/East/South/West.
-- [x] Tiene `RoomBounds`.
-- [x] `Get Room Bounds Data` usa `Get Component Bounds`.
-- [x] `Origin → Bounds Center`.
-- [x] `Box Extent → Bounds Extent`.
-- [x] Start de prueba devuelve `980,980,400`.
-- [ ] Verificar visualmente `RoomBounds.RelativeLocation` final.
-- [ ] Limpiar componentes debug solo después de revisar dependencias.
-- [ ] Validar un Blueprint hijo real de Start.
-- [ ] Validar Level Instance o Packed Level Blueprint visual.
+- [x] Función creada.
+- [x] Input `Candidate Room Actor`.
+- [x] Output `Overlaps Placed Rooms`.
+- [x] Valida candidata.
+- [x] Obtiene candidate bounds.
+- [x] Recorre `SpawnedRooms` con `For Each Loop with Break`.
+- [x] Ignora actores inválidos.
+- [x] Ignora la propia candidata.
+- [x] Obtiene placed bounds.
+- [x] Aplica AABB X/Y/Z.
+- [x] `Found Overlap` se devuelve al completar.
+- [x] Caso libre devuelve False.
+- [x] Caso forzado devuelve True.
 
-## 8. RoomBounds procedural
-
-- [x] `Update Room Bounds` calcula X desde `Room Width`.
-- [x] `Update Room Bounds` calcula Y desde `Room Depth`.
-- [x] `Update Room Bounds` calcula Z desde altura de paredes.
-- [x] `Set Box Extent` recibe vector calculado.
-- [x] `Set Relative Location` centra Z.
-- [x] Primera hija devuelve `995,995,420`.
-- [ ] Probar 5x5.
-- [ ] Probar 8x5.
-- [ ] Probar 5x10.
-- [ ] Probar 10x10.
-- [ ] Probar tamaños aleatorios min/max.
-
-## 9. Comparación AABB padre-hija
-
-Variables locales confirmadas:
+Fórmula protegida:
 
 ```text
-Parent Bounds Center : Vector
-Parent Bounds Extent : Vector
-Child Bounds Center  : Vector
-Child Bounds Extent  : Vector
-bBoundsOverlap       : Boolean
+Abs(CandidateCenter - PlacedCenter)
+<= CandidateExtent + PlacedExtent
 ```
 
-Pruebas:
+por cada eje y AND final.
 
-- [x] Bounds del padre obtenidos después de mover la hija.
-- [x] Bounds de la hija obtenidos después de moverla.
-- [x] X usa `Abs(ParentCenterX - ChildCenterX) <= ParentExtentX + ChildExtentX`.
-- [x] Y usa `Abs(ParentCenterY - ChildCenterY) <= ParentExtentY + ChildExtentY`.
-- [x] Z usa `Abs(ParentCenterZ - ChildCenterZ) <= ParentExtentZ + ChildExtentZ`.
-- [x] `bBoundsOverlap = X AND Y AND Z`.
-- [x] Caso libre con 1000 devuelve `False`.
-- [x] Caso forzado con -500 devuelve `True`.
-- [x] Error de `ABS` antes de la resta corregido.
-- [ ] Confirmar que el literal volvió a 1000 antes de Fase F.
+## 8. BP_Room_PreBuilt_Base
 
-## 10. Reintentos controlados — próxima fase
+- [x] Implementa `BPI_DungeonRoomV2`.
+- [x] Tiene DoorPoints N/E/S/W.
+- [x] Tiene `RoomBounds`.
+- [x] `Get Room Bounds Data` usa `Get Component Bounds`.
+- [x] Start de prueba devuelve `980,980,400`.
+- [x] Key hija de la base devuelve bounds válidos.
+- [x] Boss hija de la base devuelve bounds válidos.
+- [x] Error de clase debug Key con bounds cero diagnosticado.
+- [x] Clases actuales:
 
-- [ ] Crear/confirmar `Corridor Length : Float`.
-- [ ] Crear/confirmar `Placement Retry Step : Float`.
-- [ ] Crear/confirmar `Placement Attempt : Integer`.
-- [ ] Crear/confirmar `Max Placement Attempts : Integer`.
-- [ ] Una colisión inicial provoca un reintento.
-- [ ] Cada reintento aumenta Corridor Length.
-- [ ] Se mueve la misma referencia.
-- [ ] No se llama otra vez a `SpawnActor`.
-- [ ] No se repite `InitRoomFromCell`.
-- [ ] No se regenera HISM.
-- [ ] Termina cuando `bBoundsOverlap == false`.
-- [ ] Termina al alcanzar `Max Placement Attempts`.
-- [ ] `SpawnedRooms.Num == 2`.
-- [ ] Probar seed 12345 North.
-- [ ] Probar seed 12346 East.
+```text
+BP_Room_PreBuilt_Base_Child_Key
+BP_Room_PreBuilt_Base_Child_Boss
+```
 
-## 11. Direcciones y DoorPoints protegidos
+- [ ] Revisar `RoomBounds.RelativeLocation` final.
+- [ ] Limpiar componentes debug solo tras revisar referencias.
+- [ ] Validar Level Instance o Packed Level Blueprint.
 
-### Aperturas
+## 9. TryAddSpecialCellFromParent
 
-- [ ] Cell North abre SouthOpening.
-- [ ] Cell East abre WestOpening.
-- [ ] Cell South abre NorthOpening.
-- [ ] Cell West abre EastOpening.
+- [x] Input `Parent Cell Index`.
+- [x] Input `Special Room Type`.
+- [x] Output `bAdded`.
+- [x] Output `New Cell Index`.
+- [x] Rechaza Start.
+- [x] Rechaza Normal.
+- [x] Valida Parent Cell Index.
+- [x] Fallos devuelven `New Cell Index=-1`.
+- [x] `New Cell Index` sale del Add de `DungeonCells`.
+- [x] Añade un `DungeonCellLink` correspondiente.
+- [x] Mantiene `DungeonCells.Num == DungeonCellLinks.Num`.
+- [x] Prueba las cuatro direcciones.
+- [x] Usa `(Direction Start Index + Index) % 4`.
+- [x] Error división/modulo corregido.
+- [x] Falla solo si las cuatro direcciones están ocupadas.
 
-### DoorWorldLocation
+## 10. Key y Boss adicionales
 
-- [ ] Dungeon North devuelve `Arrow_Entrance_South`.
-- [ ] Dungeon East devuelve `Arrow_Exit_East`.
-- [ ] Dungeon South devuelve `Arrow_Exit_North`.
-- [ ] Dungeon West devuelve `Arrow_Exit_West`.
+- [x] Los antiguos `Set Array Elem` de Room Type están desconectados.
+- [x] `Key Cell Index` representa padre normal.
+- [x] `Boss Cell Index` representa padre normal.
+- [x] Key se añade primero.
+- [x] Boss se añade después.
+- [x] Key comprueba coordenada libre.
+- [x] Boss comprueba coordenada libre después de Key.
+- [x] Mensaje `KEY SPECIAL ADDED` confirmado.
+- [x] Mensaje `BOSS SPECIAL ADDED` confirmado.
+- [x] Total 13 confirmado con `Max Rooms=10`.
 
-## 12. Spawn completo futuro
+## 11. Generación completa
 
-- [ ] `DungeonCells.Num == SpawnedRooms.Num`.
-- [ ] Todas las salas aceptadas.
-- [ ] Sin solapamientos.
-- [ ] Pasillos conectan DoorPoints.
-- [ ] Boss Door sigue correcta.
-- [ ] Regeneración limpia todos los actores y arrays.
+- [x] `GenerateDungeon` usa loop desde 1 hasta `DungeonCells.Length-1`.
+- [x] `Room Placed=false` conecta a `Break`.
+- [x] Tres habitaciones iniciales validadas antes del loop general.
+- [x] Diez celdas físicas validadas antes de hacer especiales adicionales.
+- [x] Trece habitaciones validadas después del cambio final.
+- [ ] Repetir regresión con seed 12345.
+- [ ] Repetir regresión con seed 12346.
+- [ ] Confirmar visualmente cero solapamientos en ambas.
+- [ ] Confirmar `DungeonCells.Num=13`.
+- [ ] Confirmar `DungeonCellLinks.Num=13`.
+- [ ] Confirmar `SpawnedRooms.Num=13`.
 
-## 13. Rendimiento
+## 12. Puertas prebuilt — próxima fase
 
-- [ ] Sin Tick en generador para generar.
-- [ ] Sin Tick en salas para generar.
-- [ ] HISM mantiene instancias agrupadas.
-- [x] Primera hija usa una llamada de inicialización.
-- [x] Las pruebas de posición mueven la misma hija.
-- [ ] Reintentos solo mueven actor.
-- [ ] Medir 10, 20, 50 y 150 salas.
-- [ ] Medir prebuilt con Level Instance/Packed Level Blueprint.
+- [ ] Definir patrón de puertas reales.
+- [ ] Dead End: 1 puerta.
+- [ ] Straight: 2 opuestas.
+- [ ] Corner/L: 2 contiguas.
+- [ ] T: 3.
+- [ ] Cross: 4.
+- [ ] Probar rotaciones 0/90/180/270.
+- [ ] Rechazar prebuilt incompatible.
+- [ ] No permitir huecos inventados.
+- [ ] Mantener habitaciones procedurales flexibles 1–4.
 
-## Política de pruebas
+## 13. Limpieza
+
+No borrar hasta completar la regresión:
+
+- [ ] `SpawnFirstChildRoom`.
+- [ ] `SpawnRoomsFromCells`.
+- [ ] `Set Array Elem` antiguos de Key/Boss.
+- [ ] Prints temporales.
+- [ ] Variables sin referencias.
+
+Política:
+
+```text
+Find References
+→ compilar
+→ probar
+→ eliminar
+→ nueva regresión
+```
+
+## Política general de pruebas
 
 ```text
 compilar
 → prueba controlada
 → caso libre
-→ caso de colisión
-→ varias direcciones/seeds
+→ caso de fallo
+→ varias seeds/direcciones
 → revisar Output Log
 → revisar visualmente
 → documentar
 ```
-
-No avanzar a la siguiente fase si la actual no está validada.
