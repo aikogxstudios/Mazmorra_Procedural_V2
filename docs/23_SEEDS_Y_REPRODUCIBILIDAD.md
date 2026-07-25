@@ -1,14 +1,10 @@
 # 23 — Seeds y reproducibilidad
 
+**Última actualización:** 2026-07-25
+
 ## Objetivo
 
-La misma seed debería permitir reproducir una run para:
-
-- depuración;
-- compartir layouts;
-- repetir errores;
-- pruebas automáticas futuras;
-- contenido determinista.
+La misma seed debe permitir reproducir una run para depuración, compartir layouts, repetir errores y preparar pruebas automáticas.
 
 ## Variables conocidas
 
@@ -17,12 +13,18 @@ DungeonSeed : Integer
 bUseRandomSeed : Boolean
 RandomStream : Random Stream
 ST_DungeonCell.RoomSeed : Integer
-New Room Seed : Integer local de TryAddRandomCell
+New Room Seed : Integer
+```
+
+Variables de placement:
+
+```text
+Corridor Length
+Placement Retry Step
+Max Placement Attempts
 ```
 
 ## InitRandomStream
-
-Responsabilidad conocida:
 
 ```text
 resolver DungeonSeed
@@ -30,21 +32,30 @@ resolver DungeonSeed
 → usarlo antes de BuildDungeonLayout
 ```
 
-El gráfico exacto aún necesita captura si se modifica.
+El gráfico exacto requiere captura antes de modificaciones.
 
-## Uso del stream en TryAddRandomCell
+## TryAddRandomCell
 
-Confirmado:
-
-### Selección de padre
+Usa `RandomStream` para:
 
 ```text
-Random Integer in Range from Stream
-Min = 0
-Max = DungeonCells.Length - 1
+seleccionar padre
+seleccionar dirección
+crear RoomSeed
 ```
 
-### Selección de dirección
+Determinismo lógico depende de:
+
+```text
+misma DungeonSeed
+mismo Max Rooms
+mismo Max Generation Attempts
+mismo orden de llamadas al stream
+```
+
+## TryAddSpecialCellFromParent
+
+Usa `RandomStream` para elegir el índice inicial de dirección:
 
 ```text
 Random Integer in Range from Stream
@@ -52,84 +63,85 @@ Min = 0
 Max = 3
 ```
 
-### Seed de hija
+Después prueba las cuatro direcciones de forma determinista:
 
 ```text
-Random Integer in Range from Stream
-Min = 1
-Max = 999999
+(Direction Start Index + Loop Index) % 4
 ```
 
-Esto hace determinista el crecimiento lógico siempre que:
+Esto significa que, con el mismo estado del stream y los mismos datos previos, el orden de direcciones será reproducible.
 
-- el stream se inicialice igual;
-- el orden de llamadas no cambie;
-- los mismos reintentos ocurran;
-- `MaxRooms` y `MaxGenerationAttempts` sean iguales.
+## Placement
+
+El placement actual es determinista cuando permanecen iguales:
+
+```text
+orden de DungeonCells
+tamaños de habitaciones
+DoorPoints
+RoomBounds
+Corridor Length
+Placement Retry Step
+Max Placement Attempts
+orden de SpawnedRooms
+```
+
+Los reintentos no consumen random adicional: aumentan la longitud con un paso fijo.
+
+## Seeds confirmadas
+
+Corrección actual:
+
+```text
+Seed 12345 → South
+Seed 12346 → East
+```
+
+No documentar 12345 como North sin una nueva prueba visual.
+
+## Resultado actual con Max Rooms 10
+
+```text
+1 Start
+10 Normal
+1 Key
+1 Boss
+= 13
+```
+
+Key y Boss se añaden mediante `TryAddSpecialCellFromParent`, por lo que cambian el consumo del RandomStream respecto al sistema antiguo que convertía habitaciones existentes.
+
+Esto es esperado: una modificación del orden de llamadas puede cambiar resultados posteriores aun usando la misma DungeonSeed.
 
 ## RoomSeed
 
-Cada hija guarda:
+Cada nueva celda guarda:
 
 ```text
 RoomSeed = New Room Seed
 ```
 
-Objetivo futuro:
-
-```text
-BP_RoomMaster_Dungeon
-→ usar RoomSeed para tamaño y contenido interno
-```
-
-Estado actual exacto:
-
-```text
-⚪ No está confirmado si RandomizeRoomSize usa esa seed.
-```
+Pendiente confirmar que todas las decisiones internas de `BP_RoomMaster_Dungeon` usan un stream derivado de ese `RoomSeed` en lugar de random global.
 
 ## Riesgo de random global
 
-Si `BP_RoomMaster_Dungeon.RandomizeRoomSize` usa nodos random globales en lugar de un stream basado en `RoomSeed`:
+Si el tamaño o contenido interno usa nodos random globales:
 
 ```text
 misma DungeonSeed
-≠
-misma geometría de salas
+≠ necesariamente misma geometría
 ```
 
-Esto debe verificarse antes de declarar la run completamente reproducible.
+La reproducibilidad completa requiere streams explícitos o sub-seeds.
 
-## Placement futuro y seeds
-
-La longitud inicial de pasillo debería usar `RandomStream` o un stream derivado.
-
-```text
-CorridorLength inicial
-→ corto/medio/largo
-```
-
-No debe depender de random global si se quiere reproducibilidad.
-
-Los reintentos por colisión son deterministas si:
-
-```text
-PlacementRetryStep fijo
-MaxPlacementAttempts fijo
-orden de salas fijo
-bounds iguales
-```
-
-## Contenido futuro
-
-La misma seed puede derivar sub-seeds:
+## Sub-seeds futuras
 
 ```text
 DungeonSeed
-├─ LayoutSeed
-├─ RoomSeed por celda
-├─ CorridorSeed por conexión
-└─ ContentSeed por sala
+├ LayoutSeed
+├ RoomSeed por celda
+├ CorridorSeed por conexión
+└ ContentSeed por sala
 ```
 
 Estado:
@@ -138,50 +150,43 @@ Estado:
 🔮 diseño futuro
 ```
 
-No introducir múltiples streams durante `SpawnStartRoom`.
-
-## Reglas de prueba
-
-### Layout
-
-```text
-Misma DungeonSeed
-Mismo MaxRooms
-Mismo MaxGenerationAttempts
-→ mismos GridX/GridY y links
-```
-
-### Habitación
-
-```text
-Mismo RoomSeed
-→ mismo RoomWidth/RoomDepth/altura/contenido
-```
-
-Aún pendiente de validar.
-
-### Placement
-
-```text
-Mismos tamaños y mismas longitudes iniciales
-→ mismas posiciones físicas
-```
-
-Pendiente.
-
-## Registro recomendado
-
-Cuando ocurra un bug, imprimir o guardar:
+## Registros recomendados para bugs
 
 ```text
 DungeonSeed
 MaxRooms
+DungeonCells.Num
+DungeonCellLinks.Num
+SpawnedRooms.Num
 ChildIndex
 ParentCellIndex
 DirectionFromParent
+RoomType
 RoomSeed
 CorridorLength
 PlacementAttempt
+CandidateBounds
+PlacedRoomIndex
+```
+
+Para especiales añadir:
+
+```text
+SpecialRoomType
+Parent Cell Index
+Direction Start Index
+New Cell Index
+```
+
+## Pruebas pendientes
+
+```text
+[ ] Ejecutar seed 12345 varias veces y comparar layout completo.
+[ ] Ejecutar seed 12346 varias veces y comparar layout completo.
+[ ] Confirmar mismos índices Key/Boss.
+[ ] Confirmar mismas posiciones físicas.
+[ ] Confirmar mismos tamaños procedurales.
+[ ] Confirmar misma selección futura de prebuilt/rotación.
 ```
 
 ## Estado actual
@@ -189,7 +194,9 @@ PlacementAttempt
 ```text
 ✅ RandomStream usado para layout.
 ✅ RoomSeed guardado en ST_DungeonCell.
+✅ Dirección inicial especial usa RandomStream.
+✅ Reintentos físicos usan pasos fijos.
 🟡 reproducibilidad lógica probable.
-⚪ reproducibilidad de tamaño de sala no confirmada.
-⏳ reproducibilidad de placement pendiente.
+🟡 reproducibilidad de placement probable con bounds/tamaños iguales.
+⚪ reproducibilidad interna de geometría procedural no confirmada.
 ```
