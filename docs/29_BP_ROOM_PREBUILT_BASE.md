@@ -1,45 +1,74 @@
 # 29 — BP_Room_PreBuilt_Base
 
-**Estado:** prototipo técnico confirmado  
-**Última actualización:** 2026-07-23
+**Estado:** base técnica confirmada  
+**Última actualización:** 2026-07-25
 
 ## Objetivo
 
-`BP_Room_PreBuilt_Base` será el actor controlador común para habitaciones especiales construidas a mano.
-
-Ejemplos futuros:
-
-```text
-BP_Room_PreBuilt_Start
-BP_Room_PreBuilt_Key
-BP_Room_PreBuilt_Boss
-BP_Room_PreBuilt_Shop
-BP_Room_PreBuilt_Event
-```
+`BP_Room_PreBuilt_Base` es el actor controlador común para habitaciones construidas a mano.
 
 No sustituye a `BP_RoomMaster_Dungeon`.
 
 ```text
 BP_RoomMaster_Dungeon
-→ habitaciones comunes procedurales
-→ tamaño variable futuro
-→ geometría HISM
+→ habitaciones procedurales comunes
+→ HISM
+→ tamaño variable
 → RoomBounds dinámico
+→ puede adaptarse a 1–4 conexiones
 ```
 
 ```text
 BP_Room_PreBuilt_Base
-→ habitaciones especiales hechas a mano
-→ tamaño definido por cada Blueprint hijo
-→ RoomBounds y DoorPoints manuales
-→ contenido visual mediante Level Instance o Packed Level Blueprint cuando se valide
+→ habitaciones especiales/hechas a mano
+→ tamaño definido por Blueprint hijo
+→ RoomBounds manual
+→ DoorPoints manuales
+→ patrón de puertas físicas futuro
 ```
 
-## Estado actual del asset
+## Hijos confirmados
 
-El prototipo actual fue creado/adaptado a partir de la habitación debug Start y todavía contiene componentes visuales y de prueba.
+```text
+BP_Room_PreBuilt_Base_Child_Key
+BP_Room_PreBuilt_Base_Child_Boss
+```
 
-No limpiar todavía:
+Ambos se crearon como hijos de la base y cambiaron material/nombre visual de debug.
+
+Resultado:
+
+```text
+✅ implementan el contrato heredado
+✅ devuelven RoomBounds válidos
+✅ pueden ser colocados por PlaceChildRoomFromParent
+✅ participan en DoesRoomOverlapPlacedRooms
+```
+
+## Bug corregido
+
+La antigua clase:
+
+```text
+BP_Room_Debug_Key_C
+```
+
+devolvía:
+
+```text
+Bounds Center = 0,0,0
+Bounds Extent = 0,0,0
+```
+
+Esto provocaba falsos overlaps incluso cuando la habitación estaba lejos.
+
+La solución fue sustituirla por un hijo real de `BP_Room_PreBuilt_Base`.
+
+## Estado actual de la base
+
+La base todavía contiene componentes visuales/debug heredados.
+
+No limpiar sin revisar referencias:
 
 ```text
 SM_Floor_Debug
@@ -49,25 +78,15 @@ WallFill_...
 DoorMarker_...
 ```
 
-Antes de eliminar cualquiera, revisar si participa en:
-
-```text
-Init Room from Cell
-Get Door World Location
-cierre de huecos
-marcadores de puertas
-visualización debug
-```
-
 ## Contrato obligatorio
 
-La base implementa:
+Interfaz:
 
 ```text
 BPI_DungeonRoomV2
 ```
 
-Funciones visibles:
+Funciones:
 
 ```text
 Init Room from Cell
@@ -75,7 +94,7 @@ Get Door World Location
 Get Room Bounds Data
 ```
 
-Componentes técnicos confirmados:
+Componentes técnicos:
 
 ```text
 Scene
@@ -86,131 +105,77 @@ DoorPoint_West
 RoomBounds
 ```
 
-Cada habitación prebuilt debe poder responder al mismo contrato que una habitación procedural.
-
 ## Get Room Bounds Data
-
-Firma:
-
-```text
-Bounds Center : Vector
-Bounds Extent : Vector
-```
-
-Implementación:
 
 ```text
 RoomBounds
 → Get Component Bounds
-   ├ Origin     → Bounds Center
-   └ Box Extent → Bounds Extent
+   Origin      → Bounds Center
+   Box Extent  → Bounds Extent
 ```
 
 No usar `Sphere Radius`.
 
 ## RoomBounds
 
-`RoomBounds` es el volumen lógico que representa el espacio físico ocupado por la habitación.
+Representa el volumen lógico ocupado por la habitación para placement.
 
 No es:
 
 ```text
-la colisión del jugador
-la colisión de paredes
-un trigger jugable
+colisión del jugador
+trigger jugable
+colisión exacta de paredes
 ```
 
-Se usa para placement:
+Uso:
 
 ```text
-¿la habitación candidata invade una habitación aceptada?
-Sí → mover más lejos
-No  → aceptar posición
+DoesRoomOverlapPlacedRooms
+→ comparar candidata contra SpawnedRooms aceptadas
 ```
 
-### Configuración por Blueprint hijo
-
-Cada habitación hija debe ajustar manualmente:
+Cada Blueprint hijo debe ajustar:
 
 ```text
 RoomBounds.BoxExtent
 RoomBounds.RelativeLocation
 ```
 
-`Box Extent` representa la mitad del tamaño total.
-
-Ejemplo:
+Valor de Start validado en runtime:
 
 ```text
-Habitación total aproximada: 6000 × 4000 × 1000
-Box Extent:                3000 × 2000 × 500
-Relative Location Z:       500
+Bounds Extent = 980,980,400
 ```
 
-El volumen debe cubrir aproximadamente:
-
-```text
-suelo
-paredes
-techo
-geometría decorativa grande que ocupe espacio real
-```
-
-No necesita crecer por:
-
-```text
-luces
-partículas pequeñas
-decoración puramente visual sin volumen importante
-```
-
-### Prototipo Start validado
-
-Valor confirmado en runtime:
-
-```text
-Bounds Extent = X 980, Y 980, Z 400
-```
-
-El valor final de `Relative Location` debe revisarse visualmente antes de convertir esta sala en plantilla definitiva.
+`RelativeLocation` final sigue pendiente de revisión visual.
 
 ## DoorPoints
 
-Cada habitación hija debe colocar manualmente:
-
-```text
-DoorPoint_North
-DoorPoint_East
-DoorPoint_South
-DoorPoint_West
-```
-
-Los DoorPoints deben marcar el centro físico de cada posible entrada/salida.
-
-El generador no debe usar el centro del actor para conectar habitaciones.
+Los DoorPoints marcan el centro físico real de cada puerta posible.
 
 ```text
 ParentDoor = Get Door World Location(Parent Room Actor, Parent Direction)
 ChildDoor  = Get Door World Location(Child Room Actor, Child Entry Direction)
 ```
 
-## Integración con Level Instance
+No conectar habitaciones desde el centro del actor.
 
-La propuesta aprobada es separar responsabilidades.
+## Integración visual futura
 
-### Actor controlador
+Actor controlador:
 
 ```text
-BP_Room_PreBuilt_Base / Blueprint hijo
+BP_Room_PreBuilt_Base / hijo
 ├ BPI_DungeonRoomV2
 ├ DoorPoints
 ├ RoomBounds
-├ datos de la celda
-├ lógica de apertura/cierre
-└ referencia o contenido visual prebuilt
+├ patrón de puertas
+├ datos de celda
+└ referencia/contenido visual
 ```
 
-### Contenido visual
+Contenido visual:
 
 ```text
 Level Instance o Packed Level Blueprint
@@ -218,14 +183,10 @@ Level Instance o Packed Level Blueprint
 ├ paredes
 ├ columnas
 ├ props
-├ escombros
-├ muebles
 └ decoración estática
 ```
 
-### Elementos jugables
-
-Mantener fuera del empaquetado puramente estático cuando sea necesario:
+Elementos jugables pueden permanecer fuera del empaquetado estático:
 
 ```text
 cofres
@@ -237,81 +198,120 @@ puertas interactivas
 eventos
 ```
 
-## Level Instance frente a Packed Level Blueprint
+## Compatibilidad de puertas — próxima fase
 
-### Level Instance
-
-Adecuado cuando la habitación necesita:
+Regla aprobada:
 
 ```text
-edición cómoda como un nivel
-actores variados
-lógica o elementos no puramente estáticos
+Una habitación prebuilt no puede inventar puertas.
 ```
 
-### Packed Level Blueprint
+Debe declarar las puertas físicas que realmente existen.
 
-Candidato para una habitación formada principalmente por mallas estáticas repetidas y decoración fija.
-
-Debe validarse antes de adoptarlo como regla porque algunos actores y componentes no estáticos no se empaquetan de la misma manera.
-
-## Flujo futuro para crear una habitación prebuilt
+Patrones iniciales:
 
 ```text
-1. Crear Blueprint hijo de BP_Room_PreBuilt_Base.
-2. Añadir o asignar contenido visual prebuilt.
-3. Colocar DoorPoints.
-4. Ajustar RoomBounds.
-5. Configurar aperturas permitidas.
-6. Compilar.
-7. Probar Get Door World Location.
-8. Probar Get Room Bounds Data.
-9. Asignar la clase al generador.
-10. Probar placement y solapamiento.
+Dead End → 1 puerta
+Straight → 2 puertas opuestas
+Corner/L → 2 puertas contiguas
+T        → 3 puertas
+Cross    → 4 puertas
+```
+
+Ejemplo Corner/L local:
+
+```text
+North + East
+```
+
+Rotaciones:
+
+```text
+0°   → North + East
+90°  → East + South
+180° → South + West
+270° → West + North
+```
+
+Antes de `SpawnActor`, el generador deberá:
+
+```text
+leer conexiones requeridas de ST_DungeonCell
+→ probar clases prebuilt candidatas
+→ probar rotaciones 0/90/180/270
+→ aceptar solo coincidencia compatible
+```
+
+Una prebuilt con dos puertas no puede utilizarse para una celda que requiere tres.
+
+## Diferencia procedural/prebuilt
+
+Procedural:
+
+```text
+recibe conexiones de la celda
+abre solo las necesarias
+tapa paredes no utilizadas
+no deja huecos al vacío
+```
+
+Prebuilt:
+
+```text
+usa huecos físicos existentes
+no abre paredes nuevas
+no inventa DoorPoints
+se rechaza si no coincide
+```
+
+## Flujo futuro para crear una prebuilt
+
+```text
+1. Crear hijo de BP_Room_PreBuilt_Base.
+2. Añadir contenido visual.
+3. Ajustar RoomBounds.
+4. Colocar DoorPoints reales.
+5. Declarar patrón de puertas.
+6. Configurar rotaciones permitidas.
+7. Compilar.
+8. Probar Get Door World Location.
+9. Probar Get Room Bounds Data.
+10. Probar selección compatible y placement.
 ```
 
 ## Reglas
 
 ```text
-No añadir habitaciones decorativas a SpawnedRooms.
-No usar el centro del actor como DoorPoint.
-No confiar en bounds automáticos del contenido visual para el placement.
-No borrar las habitaciones debug hasta sustituir sus referencias.
-No convertir todas las habitaciones a Level Instance antes de validar una sola.
+No añadir decoración a SpawnedRooms.
+No usar centro del actor como DoorPoint.
+No confiar en bounds automáticos del contenido visual.
+No borrar debug hasta sustituir referencias.
+No convertir todo a Level Instance sin validar una habitación.
+No declarar puertas que no existan físicamente.
 ```
 
 ## Pruebas pendientes
 
 ```text
-[ ] Crear BP_Room_PreBuilt_Start como Blueprint hijo real.
-[ ] Mover la geometría debug fuera de la base común.
-[ ] Verificar que propiedades heredadas pueden editarse en hijos.
-[ ] Validar RoomBounds.RelativeLocation final.
-[ ] Validar cuatro DoorPoints.
-[ ] Integrar un Level Instance de prueba.
-[ ] Confirmar que al mover el actor controlador se mueve todo el contenido.
-[ ] Medir rendimiento frente a actores sueltos.
-[ ] Evaluar Packed Level Blueprint para decoración estática.
+[ ] Verificar RoomBounds.RelativeLocation final.
+[ ] Separar geometría debug de la base.
+[ ] Crear una prebuilt Dead End real.
+[ ] Crear una prebuilt Corner/L real.
+[ ] Validar rotaciones.
+[ ] Rechazar patrón incompatible.
+[ ] Integrar Level Instance de prueba.
+[ ] Medir rendimiento.
 ```
 
-## Estado de transición
+## Limpieza
 
-Las habitaciones debug antiguas se conservan temporalmente porque todavía pueden estar referenciadas por:
-
-```text
-Start Room Class
-Room Class
-Key Debug Room Class
-Boss Debug Room Class
-```
-
-Solo se borrarán cuando:
+Solo borrar assets debug cuando:
 
 ```text
-las nuevas clases prebuilt/procedurales estén asignadas
-→ compile
-→ genere correctamente
-→ DoorPoints funcionen
-→ RoomBounds funcionen
-→ no queden referencias
+nuevas clases asignadas
+→ compila
+→ genera correctamente
+→ DoorPoints funcionan
+→ RoomBounds funcionan
+→ no quedan referencias
 ```
