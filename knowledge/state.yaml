@@ -1,5 +1,5 @@
 schema_version: 1
-last_updated: "2026-07-23"
+last_updated: "2026-07-25"
 
 project:
   game: "Caos Entre Reinos / Chaos Among Realms: Reborn"
@@ -23,46 +23,52 @@ truth_priority:
 
 current_phase:
   completed:
-    - "ST_DungeonCellLink and DungeonCellLinks"
-    - "Cells and links counts validated up to 150 rooms"
+    - "DungeonCellLinks and parent-before-child invariant"
     - "Start limited to one logical exit"
-    - "SpawnStartRoom validated"
-    - "SpawnFirstChildRoom validated for ChildIndex 1"
-    - "Exact DoorPoint alignment validated at 0.0"
-    - "GetDirectionVector Pure with correct N/E/S/W mapping"
-    - "Controlled corridor separation validated at distance 1000"
-    - "North validated with seed 12345"
-    - "East validated with seed 12346"
-    - "BP_Room_PreBuilt_Base adapted to BPI_DungeonRoomV2"
-    - "Prebuilt Start bounds validated at 980,980,400"
-    - "Procedural child bounds validated at 995,995,420"
-    - "AABB overlap comparison implemented"
-    - "Free placement returns false"
-    - "Forced overlap returns true"
-  active: "Phase F - Controlled placement retries for ChildIndex 1"
-  next: "Create formal retry variables and move the same child until bounds no longer overlap or max attempts is reached"
-  preflight_check:
-    - "Confirm temporary Vector * Float value was restored from -500 to 1000"
+    - "SpawnStartRoom"
+    - "SpawnFirstChildRoom prototype"
+    - "Corridor separation"
+    - "RoomBounds and AABB"
+    - "Controlled placement retries"
+    - "Global overlap against SpawnedRooms"
+    - "PlaceChildRoomFromParent"
+    - "Full physical placement loop"
+    - "Max Rooms counts only Normal rooms"
+    - "Additive Key and Boss logical cells"
+    - "Four-direction search for special rooms"
+    - "Prebuilt Key and Boss children with valid bounds"
+    - "13 physical rooms with Max Rooms 10"
+  active: "Regression and prebuilt door-pattern compatibility design"
+  next: "Validate seeds 12345/12346, clean diagnostics, then implement fixed-door pattern and rotation matching for prebuilt rooms"
 
-validated_room_counts: [10, 15, 20, 50, 150]
+validated_room_counts_historical: [10, 15, 20, 50, 150]
+
+room_count_semantics:
+  MaxRooms: "Number of Normal rooms only"
+  build_layout_target: "MaxRooms + 1 Start"
+  additive_specials:
+    - "Key"
+    - "Boss"
+  confirmed_example:
+    MaxRooms: 10
+    Start: 1
+    Normal: 10
+    Key: 1
+    Boss: 1
+    total_physical: 13
 
 validated_invariants:
   cells_equal_links: true
+  cells_equal_links_equal_spawned_rooms_after_full_success: true
   start_has_parent: false
   start_parent_index: -1
   child_has_parent: true
   parent_before_child: true
   start_connection_count: 1
   spawned_rooms_zero_is_start: true
-  spawned_rooms_one_is_first_child: true
-  spawned_rooms_num_first_child_test: 2
-  first_child_uses_parent_link: true
-  first_child_entry_is_opposite_parent_direction: true
-  first_child_moves_same_actor_reference: true
-  first_child_exact_alignment_error: 0.0
-  first_child_corridor_distance: 1000.0
+  no_decorative_actors_in_spawned_rooms: true
 
-current_temporary_generate_flow:
+current_generate_flow:
   - "GenerateDungeon"
   - "Switch Has Authority"
   - "ResetDungeon"
@@ -71,87 +77,121 @@ current_temporary_generate_flow:
   - "BuildDungeonLayout"
   - "ChooseKeyAndBossCells"
   - "SpawnStartRoom"
-  - "SpawnFirstChildRoom"
+  - "For Loop with Break: 1 to DungeonCells.Length - 1"
+  - "PlaceChildRoomFromParent(Index)"
+  - "Room Placed false -> Break"
 
-stable_full_spawn_flow_before_refactor:
-  - "GenerateDungeon"
-  - "Switch Has Authority"
-  - "ResetDungeon"
-  - "InitRandomStream"
-  - "CreateStartCell"
-  - "BuildDungeonLayout"
-  - "ChooseKeyAndBossCells"
+legacy_disconnected_flow:
   - "SpawnRoomsFromCells"
   - "SpawnCorridorsFromConnections"
   - "SpawnBossRoomDoors"
   - "DebugDrawDoorPoints"
   - "DebugDrawDoorToDoorConnections"
 
-spawn_start_room:
+place_child_room_from_parent:
   status: "confirmed"
-  function: "SpawnStartRoom"
-  owner: "BP_DungeonGenerator_V2"
-  class_current_test: "BP_Room_PreBuilt_Base"
-  expected_index: 0
-  initialization_count: 1
-  spawn_transform:
-    location_source: "BP_DungeonGenerator_V2.GetActorLocation"
-    rotation: [0, 0, 0]
-    scale: [1, 1, 1]
+  input:
+    Child_Index: "Integer"
+  output:
+    Room_Placed: "Boolean"
+  responsibilities:
+    - "Validate child cell and link"
+    - "Resolve parent actor from SpawnedRooms"
+    - "Select Normal/Key/Boss class"
+    - "Spawn actor once"
+    - "Init Room from Cell once"
+    - "Align parent and child DoorPoints"
+    - "Move same actor through retries"
+    - "Check global overlap"
+    - "Add to SpawnedRooms on success"
+    - "Destroy candidate on failure"
+  class_mapping:
+    Normal: "Procedural common room class"
+    Key: "BP_Room_PreBuilt_Base_Child_Key"
+    Boss: "BP_Room_PreBuilt_Base_Child_Boss"
+    Start: "Invalid as child"
+  retry_defaults:
+    Corridor_Length: 1000.0
+    Placement_Retry_Step: 500.0
+    Max_Placement_Attempts: 10
+  rules:
+    - "Do not SpawnActor again during retries"
+    - "Do not Init Room from Cell again"
+    - "Do not regenerate HISM"
+    - "Requery Child Door Location every attempt"
 
-first_child_placement:
-  status: "corridor_separation_and_parent_overlap_test_confirmed"
-  function: "SpawnFirstChildRoom"
-  child_index: 1
-  locals_confirmed:
-    Parent_Room_Actor: "Actor Object Reference"
-    Child_Room_Actor: "Actor Object Reference"
-    Child_Entry_Direction: "E_DungeonDirection"
-    Parent_Direction: "E_DungeonDirection"
-    Parent_Door_Location: "Vector"
-    Child_Door_Location: "Vector"
-    Parent_Bounds_Center: "Vector"
-    Parent_Bounds_Extent: "Vector"
-    Child_Bounds_Center: "Vector"
-    Child_Bounds_Extent: "Vector"
-    bBoundsOverlap: "Boolean"
-  parent_direction_source: "DungeonCellLinks[1].DirectionFromParent"
-  child_entry_direction: "GetOppositeDirection(DirectionFromParent)"
-  child_spawn:
-    collision_handling: "Always Spawn, Ignore Collisions"
-    initialized_once: true
-  corridor_offset:
-    formal_variable_exists: false
-    current_literal: 1000.0
-    formula: "ParentDoorLocation + GetDirectionVector(ParentDirection) * 1000"
-  movement:
-    move_delta: "DesiredChildDoor - ChildDoorLocation"
-    new_location: "ChildRoomActor.GetActorLocation + MoveDelta"
-    same_actor_reference: true
-  tests:
-    seed_12345:
-      direction: "North"
-      door_distance: 1000.0
-      spawned_rooms_num: 2
-    seed_12346:
-      direction: "East"
-      door_distance: 1000.0
-      spawned_rooms_num: 2
+placement_formula:
+  desired_child_door: "ParentDoorLocation + GetDirectionVector(ParentDirection) * CorridorLength"
+  move_delta: "DesiredChildDoor - ChildDoorLocation"
+  new_location: "ChildRoomActor.GetActorLocation + MoveDelta"
 
-get_direction_vector:
+room_overlap:
+  function: "DoesRoomOverlapPlacedRooms"
   status: "confirmed"
-  pure: true
-  mapping:
-    North: [0, 1, 0]
-    East: [1, 0, 0]
-    South: [0, -1, 0]
-    West: [-1, 0, 0]
+  input: "Candidate Room Actor"
+  output: "Overlaps Placed Rooms"
+  behavior:
+    - "Get candidate bounds"
+    - "Loop SpawnedRooms with break"
+    - "Ignore invalid actors"
+    - "Ignore candidate itself"
+    - "Get placed bounds"
+    - "AABB X/Y/Z"
+    - "Break on first overlap"
+  formulas:
+    x: "abs(candidate_center_x - placed_center_x) <= candidate_extent_x + placed_extent_x"
+    y: "abs(candidate_center_y - placed_center_y) <= candidate_extent_y + placed_extent_y"
+    z: "abs(candidate_center_z - placed_center_z) <= candidate_extent_z + placed_extent_z"
+    final: "x AND y AND z"
+
+special_cells:
+  function: "TryAddSpecialCellFromParent"
+  status: "confirmed"
+  inputs:
+    Parent_Cell_Index: "Integer"
+    Special_Room_Type: "E_DungeonRoomType"
+  outputs:
+    bAdded: "Boolean"
+    New_Cell_Index: "Integer"
+  rejects:
+    - "Start"
+    - "Normal"
+  failure_index: -1
+  success_index_source: "Return Value of DungeonCells Add"
+  direction_search:
+    start: "Random integer 0..3 from RandomStream"
+    loop: "0..3"
+    formula: "(DirectionStartIndex + LoopIndex) % 4"
+    mapping:
+      0: "North"
+      1: "East"
+      2: "South"
+      3: "West"
+    failure: "Only after all four coordinates are occupied"
+  corrected_bug:
+    wrong: "Integer division by 4"
+    correct: "Modulo % 4"
+
+choose_key_and_boss:
+  status: "modified_and_confirmed"
+  Key_Cell_Index_meaning: "Selected Normal parent for additive Key room"
+  Boss_Cell_Index_meaning: "Selected Normal parent for additive Boss room"
+  legacy_set_array_elem_status: "Disconnected, pending cleanup"
+  add_order:
+    - "Sequence Then 0: add Key"
+    - "Sequence Then 1: add Boss"
+  confirmed_messages:
+    - "KEY SPECIAL ADDED"
+    - "BOSS SPECIAL ADDED"
 
 prebuilt_room_base:
   asset: "BP_Room_PreBuilt_Base"
-  status: "prototype_confirmed"
+  status: "confirmed technical base"
   interface: "BPI_DungeonRoomV2"
-  confirmed_contract:
+  children_confirmed:
+    - "BP_Room_PreBuilt_Base_Child_Key"
+    - "BP_Room_PreBuilt_Base_Child_Boss"
+  contract:
     - "Init Room from Cell"
     - "Get Door World Location"
     - "Get Room Bounds Data"
@@ -160,71 +200,30 @@ prebuilt_room_base:
     - "DoorPoint_South"
     - "DoorPoint_West"
     - "RoomBounds"
-  get_bounds_implementation:
+  get_bounds:
     component: "RoomBounds"
     node: "Get Component Bounds"
-    center_output: "Origin"
-    extent_output: "Box Extent"
-  test_bounds_extent: [980, 980, 400]
-  relative_location_final_visual_check_pending: true
+    center: "Origin"
+    extent: "Box Extent"
+  start_test_extent: [980, 980, 400]
   debug_components_still_present: true
-  future_visual_content:
-    - "Level Instance"
-    - "Packed Level Blueprint"
 
-procedural_room_bounds:
-  asset: "BP_RoomMaster_Dungeon"
-  status: "confirmed"
-  dynamic: true
-  first_child_test_extent: [995, 995, 420]
+fixed_prebuilt_door_patterns:
+  status: "next_phase_conceptual"
+  rule: "A prebuilt room must never invent physical doors"
+  patterns:
+    Dead_End: 1
+    Straight: 2
+    Corner_L: 2
+    T: 3
+    Cross: 4
+  rotations_degrees: [0, 90, 180, 270]
+  procedural_behavior: "Supports 1-4 connections, opens required walls and closes unused ones"
+  prebuilt_behavior: "Uses only declared physical doors and is rejected if incompatible"
 
-parent_child_aabb:
-  status: "confirmed"
-  formula_x: "abs(parent_center_x - child_center_x) <= parent_extent_x + child_extent_x"
-  formula_y: "abs(parent_center_y - child_center_y) <= parent_extent_y + child_extent_y"
-  formula_z: "abs(parent_center_z - child_center_z) <= parent_extent_z + child_extent_z"
-  final_boolean: "overlap_x AND overlap_y AND overlap_z"
-  corrected_bug:
-    wrong: "abs(parent_center) - child_center"
-    correct: "abs(parent_center - child_center)"
-  tests:
-    free:
-      offset_literal: 1000.0
-      result: false
-    forced_overlap:
-      offset_literal: -500.0
-      result: true
-
-phase_f_planned_variables:
-  Corridor_Length:
-    type: "Float"
-    status: "pending_name_confirmation_on_creation"
-  Placement_Retry_Step:
-    type: "Float"
-    status: "pending_name_confirmation_on_creation"
-  Placement_Attempt:
-    type: "Integer"
-    status: "pending_name_confirmation_on_creation"
-  Max_Placement_Attempts:
-    type: "Integer"
-    status: "pending_name_confirmation_on_creation"
-
-phase_f_rules:
-  - "Work only with ChildIndex 1"
-  - "Do not call SpawnActor again"
-  - "Do not call InitRoomFromCell again"
-  - "Do not regenerate HISM"
-  - "Move the same ChildRoomActor reference"
-  - "Stop on success or MaxPlacementAttempts"
-  - "Keep SpawnedRooms.Num equal to 2"
-
-room_master_identity:
-  original:
-    asset: "BP_RoomMaster"
-    modified: false
-  dungeon_variant:
-    asset: "BP_RoomMaster_Dungeon"
-    modified: true
+seed_corrections:
+  seed_12345: "South"
+  seed_12346: "East"
 
 critical_mappings:
   init_room_from_cell:
@@ -238,36 +237,12 @@ critical_mappings:
     South: "Arrow_Exit_North"
     West: "Arrow_Exit_West"
 
-approved_v1_room_count:
-  status: "conceptual_not_implemented"
-  normal_rooms: 15
-  start_rooms: 1
-  key_rooms: 1
-  boss_rooms: 1
-  total_physical_rooms: 18
-
-external_review_2026_07_23:
-  source: "Codex opinion requested by the user after read-only repository review"
-  document: "docs/30_REVISION_EXTERNA_CODEX.md"
-  authority: "external_recommendation_not_source_of_truth"
-  changes_current_phase: false
-  current_phase_remains: "Phase F - Controlled placement retries for ChildIndex 1"
-  accepted_future_backlog:
-    - "Validate corridor volumes against accepted rooms after full room placement is stable"
-    - "Evaluate BFS graph distance for Boss and Key after physical placement and regression"
-    - "Complete end-to-end determinism across graph, room types, sizes, offsets, content and final positions"
-    - "Add automated invariant checks after full physical placement exists"
-    - "Add screenshots, visual evidence and diagrams gradually for verification and portfolio"
-    - "Consider automated documentation consistency checks without blocking Blueprint development"
-  deferred_until_measured:
-    - "Maintain a frontier list of cells with free exits"
-    - "Refactor TryAddRandomCell or BuildDungeonLayout for efficiency"
-  protected_no_immediate_change:
-    - "ChooseKeyAndBossCells"
-    - "TryAddRandomCell"
-    - "BuildDungeonLayout"
-    - "Critical direction and DoorPoint mappings"
-    - "SpawnCorridorsFromConnections"
+cleanup_pending:
+  - "SpawnFirstChildRoom"
+  - "SpawnRoomsFromCells"
+  - "Legacy Key/Boss Set Array Elem blocks"
+  - "Temporary Print String diagnostics"
+  - "Unused variables after Find References"
 
 memory_policy:
   repository_is_official_memory: true
@@ -279,6 +254,7 @@ memory_policy:
     - "An important architectural decision is accepted or discarded"
 
 session_close:
-  date: "2026-07-23"
-  handoff_file: "sessions/2026-07-23_ROOM_BOUNDS_VALIDATED.md"
-  status: "Paused cleanly before controlled retry implementation"
+  date: "2026-07-25"
+  handoff_file: "sessions/2026-07-25_GENERACION_COMPLETA_ESPECIALES.md"
+  detailed_document: "docs/31_GENERACION_COMPLETA_Y_SALAS_ESPECIALES.md"
+  status: "Paused after 13-room success; next is regression and prebuilt door patterns"
