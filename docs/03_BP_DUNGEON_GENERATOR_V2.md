@@ -1,6 +1,6 @@
 # 03 — BP_DungeonGenerator_V2
 
-**Última actualización:** 2026-07-25
+**Última actualización:** 2026-07-26
 
 ## Responsabilidad general
 
@@ -18,7 +18,7 @@ pasillos y puertas futuros
 limpieza y regeneración
 ```
 
-El principio sigue siendo:
+Principio:
 
 ```text
 DATOS PRIMERO → SPAWN DESPUÉS
@@ -79,7 +79,7 @@ Generate on Begin Play
 Debug Dungeon
 ```
 
-## Funciones confirmadas
+## Funciones activas confirmadas
 
 ```text
 GenerateDungeon
@@ -96,7 +96,6 @@ GetDirectionVector
 SetConnectionOnCell
 ChooseKeyAndBossCells
 SpawnStartRoom
-SpawnFirstChildRoom
 PlaceChildRoomFromParent
 DoesRoomOverlapPlacedRooms
 SpawnRoomsFromCells
@@ -109,6 +108,8 @@ DebugDrawDoorPoints
 DebugDrawDoorToDoorConnections
 FindCellIndexByCoord
 ```
+
+`SpawnFirstChildRoom` ya no existe. Fue eliminado después de comprobar referencias y validar que el sistema completo seguía funcionando.
 
 ## GenerateDungeon
 
@@ -140,7 +141,7 @@ DebugDrawDoorPoints
 DebugDrawDoorToDoorConnections
 ```
 
-No borrarlo hasta la limpieza final.
+No borrar cada función sin `Find References` y prueba posterior.
 
 ## ResetDungeon
 
@@ -184,13 +185,11 @@ North es relleno para Start y no se usa porque `bHasParent=false`.
 
 `Max Rooms` cuenta solo habitaciones Normal.
 
-El límite actual usa:
-
 ```text
 DungeonCells.Length >= Max Rooms + 1
 ```
 
-El `+1` es Start.
+El `+1` representa Start.
 
 Ejemplo:
 
@@ -200,7 +199,7 @@ Max Rooms = 10
 → 1 Start + 10 Normal
 ```
 
-Key/Boss se añaden después.
+Key y Boss se añaden después.
 
 ## TryAddRandomCell
 
@@ -254,8 +253,6 @@ New Cell Index = -1
 
 ### Selección de dirección
 
-Se elige un inicio aleatorio 0..3 y se prueban cuatro direcciones:
-
 ```text
 (Direction Start Index + For Loop.Index) % 4
 ```
@@ -274,14 +271,14 @@ First Index = 0
 Last Index = 3
 ```
 
-Si la coordenada está ocupada, la rama `True` termina y continúa la siguiente iteración.
+Si la coordenada está ocupada, continúa la siguiente iteración.
 
 Si está libre:
 
 ```text
 crear New Room Seed
 actualizar conexión del padre
-crear nueva ST_DungeonCell con Special Room Type
+crear ST_DungeonCell con Special Room Type
 crear conexión opuesta
 Add DungeonCells
 Add DungeonCellLinks
@@ -324,23 +321,14 @@ distancia mínima desde Start
 → mejor score de distancia
 ```
 
-Cambio arquitectónico:
-
-```text
-Boss Cell Index ya no se convierte en Boss.
-Key Cell Index ya no se convierte en Key.
-```
-
-Ahora significan:
+Significado actual:
 
 ```text
 Boss Cell Index = padre normal para la Boss adicional
 Key Cell Index  = padre normal para la Key adicional
 ```
 
-Los antiguos `Set Array Elem` quedaron desconectados temporalmente.
-
-Al final:
+Los antiguos `Set Array Elem` están desconectados y pendientes de limpieza.
 
 ```text
 Sequence.Then 0
@@ -368,17 +356,6 @@ Resultado:
 ```text
 SpawnedRooms[0] = Start
 ```
-
-## SpawnFirstChildRoom
-
-Estado:
-
-```text
-✅ prototipo histórico de placement y reintentos
-⏳ pendiente de limpieza cuando PlaceChildRoomFromParent quede cerrado
-```
-
-No borrar todavía.
 
 ## PlaceChildRoomFromParent
 
@@ -451,7 +428,7 @@ NewLocation = ChildRoomActor.GetActorLocation + MoveDelta
 SetActorLocation sobre la misma Child Room Actor
 ```
 
-En cada intento se vuelve a consultar `Child Door Location` después del movimiento previo.
+En cada intento se vuelve a consultar `Child Door Location`.
 
 ### Variables locales confirmadas
 
@@ -470,7 +447,7 @@ bPlacement Succeeded   : Boolean
 Bounds Overlap         : Boolean
 ```
 
-Valores de prueba:
+Valores probados:
 
 ```text
 Corridor Length = 1000
@@ -509,12 +486,10 @@ bPlacementSucceeded = true
 → Break
 ```
 
-Completed:
+Completed con éxito:
 
 ```text
-bPlacementSucceeded == true
-→ obtener distancia final
-→ Add Child Room Actor a SpawnedRooms
+Add Child Room Actor a SpawnedRooms
 → Room Placed = true
 ```
 
@@ -588,33 +563,60 @@ BP_Room_PreBuilt_Base_Child_Boss
 
 Ambas heredan `BPI_DungeonRoomV2`, `RoomBounds` y DoorPoints.
 
-## GetOppositeDirection
+## SpawnFirstChildRoom — limpieza completada
 
-Pure protegida:
+Estado:
 
 ```text
-North → South
-East  → West
-South → North
-West  → East
+✅ eliminado
 ```
 
-## GetDirectionVector
-
-Pure confirmada:
+Era el prototipo histórico de `ChildIndex = 1` para desarrollar:
 
 ```text
-North → ( 0,  1, 0)
-East  → ( 1,  0, 0)
-South → ( 0, -1, 0)
-West  → (-1,  0, 0)
+alineación
+separación
+AABB
+reintentos
+overlap global
 ```
 
-## Seeds conocidas
+Verificación:
 
 ```text
-Seed 12345 → South
-Seed 12346 → East
+Find References
+→ solo definición visible
+→ borrar
+→ compilar
+→ generación completa funcionando
+```
+
+Reemplazo activo:
+
+```text
+PlaceChildRoomFromParent
+```
+
+Documento:
+
+```text
+sessions/2026-07-26_SPAWN_FIRST_CHILD_REMOVED.md
+```
+
+## Regresión final de Fase H
+
+```text
+Seed 12345 → South → 13 habitaciones sin fallos
+Seed 12346 → East  → 13 habitaciones sin fallos
+```
+
+En ambas:
+
+```text
+1 Start
+10 Normal
+1 Key
+1 Boss
 ```
 
 ## SpawnRoomsFromCells — sistema antiguo
@@ -625,6 +627,26 @@ Seed 12346 → East
 ```
 
 No borrar hasta revisar referencias.
+
+## Limpieza pendiente
+
+```text
+SpawnRoomsFromCells
+Set Array Elem antiguos de Key/Boss
+Print String temporales
+variables sin referencias
+nodos desconectados
+```
+
+Proceso:
+
+```text
+Find References
+→ compilar
+→ prueba controlada
+→ borrar
+→ regresión
+```
 
 ## Próxima fase
 
@@ -639,6 +661,8 @@ Cross
 ```
 
 Debe seleccionar clase + rotación antes de `SpawnActor` y nunca inventar puertas.
+
+Después se preparará la primera versión del pasillo procedural adaptable entre DoorPoints reales.
 
 ## Mappings protegidos
 
@@ -665,4 +689,6 @@ West  → Arrow_Exit_West
 ```text
 docs/31_GENERACION_COMPLETA_Y_SALAS_ESPECIALES.md
 sessions/2026-07-25_GENERACION_COMPLETA_ESPECIALES.md
+sessions/2026-07-26_PHASE_H_REGRESSION_COMPLETE.md
+sessions/2026-07-26_SPAWN_FIRST_CHILD_REMOVED.md
 ```
