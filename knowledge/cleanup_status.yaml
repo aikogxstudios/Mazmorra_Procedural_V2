@@ -3,8 +3,9 @@ last_updated: "2026-07-26"
 blueprint: "BP_DungeonGenerator_V2"
 
 cleanup_phase:
-  status: "active"
+  status: "active_but_conservative"
   rule: "Find References -> compile -> test -> delete -> regression"
+  policy: "Do not remove useful debug helpers while door compatibility and corridor work are still pending"
 
 removed_and_validated:
   - name: "SpawnFirstChildRoom"
@@ -38,6 +39,13 @@ removed_and_validated:
     key_present: true
     boss_present: true
 
+  - name: "DebugDrawConnections"
+    kind: "debug function"
+    reason: "Not used by the current workflow"
+    removed: true
+    blueprint_compiles: true
+    full_generation_still_works: true
+
 active_spawn_flow:
   - "GenerateDungeon"
   - "SpawnStartRoom"
@@ -49,14 +57,26 @@ active_special_flow:
   - "TryAddSpecialCellFromParent(Key Cell Index, Key)"
   - "TryAddSpecialCellFromParent(Boss Cell Index, Boss)"
 
+retained_debug_tools:
+  status: "keep_for_now"
+  reason: "They may help validate prebuilt door patterns, DoorPoints, physical alignment and adaptive corridors"
+  functions:
+    - "DebugPrintLayout"
+    - "DebugDrawDoorPoints"
+    - "DebugDrawDoorToDoorConnections"
+  rule: "Do not remove without a new reference check and a clear replacement"
+
 pending_cleanup:
-  - "Temporary Print String diagnostics"
+  - "Temporary Print String diagnostics, only after deciding which remain useful"
   - "Unused local/member variables after Find References"
-  - "Remaining disconnected nodes"
+  - "Remaining disconnected nodes that have no diagnostic value"
 
 protected:
   - "PlaceChildRoomFromParent"
   - "DoesRoomOverlapPlacedRooms"
   - "TryAddSpecialCellFromParent"
   - "SpawnStartRoom"
+  - "DebugPrintLayout"
+  - "DebugDrawDoorPoints"
+  - "DebugDrawDoorToDoorConnections"
   - "DungeonCells[Index] = DungeonCellLinks[Index] = SpawnedRooms[Index]"
