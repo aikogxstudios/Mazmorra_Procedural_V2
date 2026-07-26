@@ -1,5 +1,5 @@
 schema_version: 1
-last_updated: "2026-07-25"
+last_updated: "2026-07-26"
 
 project:
   game: "Caos Entre Reinos / Chaos Among Realms: Reborn"
@@ -38,8 +38,9 @@ current_phase:
     - "Four-direction search for special rooms"
     - "Prebuilt Key and Boss children with valid bounds"
     - "13 physical rooms with Max Rooms 10"
-  active: "Regression and prebuilt door-pattern compatibility design"
-  next: "Validate seeds 12345/12346, clean diagnostics, then implement fixed-door pattern and rotation matching for prebuilt rooms"
+    - "Final Phase H regression with seeds 12345 and 12346"
+  active: "Controlled cleanup and prebuilt door-pattern compatibility"
+  next: "Use Find References before deleting legacy nodes, then implement fixed-door pattern and rotation matching for prebuilt rooms; begin adaptive procedural corridor if time permits"
 
 validated_room_counts_historical: [10, 15, 20, 50, 150]
 
@@ -56,6 +57,30 @@ room_count_semantics:
     Key: 1
     Boss: 1
     total_physical: 13
+
+final_phase_h_regression:
+  status: "confirmed"
+  defaults:
+    MaxRooms: 10
+    Corridor_Length: 1000.0
+    Placement_Retry_Step: 500.0
+    Max_Placement_Attempts: 10
+  seeds:
+    seed_12345:
+      first_direction: "South"
+      total_rooms: 13
+      key_added: true
+      boss_added: true
+      placement_failure: false
+      visible_overlap: false
+    seed_12346:
+      first_direction: "East"
+      total_rooms: 13
+      key_added: true
+      boss_added: true
+      placement_failure: false
+      visible_overlap: false
+  issue_7: "closed_completed"
 
 validated_invariants:
   cells_equal_links: true
@@ -221,6 +246,16 @@ fixed_prebuilt_door_patterns:
   procedural_behavior: "Supports 1-4 connections, opens required walls and closes unused ones"
   prebuilt_behavior: "Uses only declared physical doors and is rejected if incompatible"
 
+adaptive_corridor:
+  status: "planned_after_cleanup_and_door_compatibility"
+  v1: "Straight procedural corridor between real Parent and Child DoorPoints"
+  requirements:
+    - "Generate after all rooms are placed"
+    - "Adapt length to real DoorPoint distance"
+    - "Floor, two walls and optional ceiling"
+    - "No spline required for first version"
+    - "Keep future connector rooms such as parkour and traps separate"
+
 seed_corrections:
   seed_12345: "South"
   seed_12346: "East"
@@ -254,7 +289,7 @@ memory_policy:
     - "An important architectural decision is accepted or discarded"
 
 session_close:
-  date: "2026-07-25"
+  date: "2026-07-26"
   handoff_file: "sessions/2026-07-25_GENERACION_COMPLETA_ESPECIALES.md"
   detailed_document: "docs/31_GENERACION_COMPLETA_Y_SALAS_ESPECIALES.md"
-  status: "Paused after 13-room success; next is regression and prebuilt door patterns"
+  status: "Phase H closed after regression; next is cleanup, prebuilt door patterns and adaptive corridor V1"
