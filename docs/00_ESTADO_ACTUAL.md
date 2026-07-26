@@ -1,6 +1,6 @@
 # 00 — Estado actual confirmado
 
-**Última actualización:** 2026-07-25  
+**Última actualización:** 2026-07-26  
 **Motor:** Unreal Engine 5.4  
 **Sistema:** Aguja del Caos / Mazmorra Procedural V2  
 **Implementación:** Blueprints
@@ -18,37 +18,60 @@ Este archivo es la referencia operativa principal. Cuando exista una contradicci
 🛑 estable / no tocar sin bug demostrado
 ```
 
-## Punto exacto al cerrar la sesión
+## Estado actual
 
 ```text
 ✅ Fase F — reintentos controlados.
 ✅ Fase G — overlap contra todas las salas aceptadas.
-✅ Fase H — colocación física de todas las hijas.
+✅ Fase H — colocación física de todas las habitaciones hijas.
 ✅ Key y Boss añadidas como salas especiales adicionales.
 ✅ Max Rooms cuenta solo habitaciones Normal.
-⏳ Próximo: regresión final y compatibilidad de puertas para habitaciones prebuilt.
+✅ Regresión final con seeds 12345 y 12346.
+✅ SpawnFirstChildRoom eliminado después de Find References y prueba posterior.
+⏳ Limpieza controlada restante.
+⏳ Compatibilidad de puertas físicas para habitaciones prebuilt.
+🔮 Pasillo procedural adaptable entre DoorPoints.
 ```
 
-Resultado final confirmado:
+## Resultado confirmado
+
+Configuración de prueba:
 
 ```text
 Max Rooms = 10
-→ 10 Normal
-+ 1 Start
-+ 1 Key
-+ 1 Boss
+Corridor Length = 1000
+Placement Retry Step = 500
+Max Placement Attempts = 10
+```
+
+Resultado:
+
+```text
+1 Start
+10 Normal
+1 Key
+1 Boss
 = 13 habitaciones físicas
 ```
 
-Mensajes confirmados:
+Regresión:
+
+```text
+Seed 12345 → South → 13 habitaciones sin fallos
+Seed 12346 → East  → 13 habitaciones sin fallos
+```
+
+En ambas:
 
 ```text
 KEY SPECIAL ADDED
 BOSS SPECIAL ADDED
-Total = 13 habitaciones
+sin SPECIAL FAILED
+sin Max Placement Attempts reached
+sin solapamientos visibles
 ```
 
-## Flujo temporal actual de GenerateDungeon
+## Flujo activo de GenerateDungeon
 
 ```text
 GenerateDungeon
@@ -66,16 +89,6 @@ GenerateDungeon
    Room Placed = False → Break
 ```
 
-El flujo antiguo permanece desconectado, no eliminado:
-
-```text
-SpawnRoomsFromCells
-SpawnCorridorsFromConnections
-SpawnBossRoomDoors
-DebugDrawDoorPoints
-DebugDrawDoorToDoorConnections
-```
-
 ## Invariante principal
 
 ```text
@@ -86,25 +99,19 @@ DungeonCellLinks[Index]
 SpawnedRooms[Index]
 ```
 
-No reordenar `SpawnedRooms`, no insertar actores decorativos y no eliminar elementos intermedios.
+Reglas:
+
+```text
+No reordenar SpawnedRooms.
+No insertar actores decorativos en SpawnedRooms.
+No eliminar elementos intermedios.
+No continuar silenciosamente si una habitación no puede colocarse.
+```
 
 ## Estado lógico estable
 
-Confirmado:
-
 ```text
 DungeonCells.Num == DungeonCellLinks.Num
-```
-
-Validado históricamente con:
-
-```text
-10, 15, 20, 50 y 150 celdas
-```
-
-También:
-
-```text
 DungeonCellLinks[0].ParentCellIndex = -1
 DungeonCellLinks[0].bHasParent = false
 Hijas: bHasParent = true
@@ -113,24 +120,29 @@ Hijas: ParentCellIndex < ChildIndex
 Start: exactamente una salida lógica
 ```
 
-## Nuevo significado de Max Rooms
+Validación histórica del layout:
+
+```text
+10, 15, 20, 50 y 150 celdas
+```
+
+## Significado oficial de Max Rooms
 
 ```text
 Max Rooms = cantidad de habitaciones Normal
 ```
 
-`BuildDungeonLayout` compara contra:
+`BuildDungeonLayout` termina cuando alcanza:
 
 ```text
 Max Rooms + 1
 ```
 
-El `+1` representa únicamente Start.
+El `+1` representa Start.
 
-Las especiales se añaden después y no consumen el límite:
+Las habitaciones especiales se añaden después y no consumen ese límite:
 
 ```text
-Start
 Key
 Boss
 futuros Room Types especiales
@@ -139,10 +151,10 @@ futuros Room Types especiales
 Ejemplo actual:
 
 ```text
-DungeonCells[0]    = Start
-DungeonCells[1..10]= Normal
-DungeonCells[11]   = Key
-DungeonCells[12]   = Boss
+DungeonCells[0]     = Start
+DungeonCells[1..10] = Normal
+DungeonCells[11]    = Key
+DungeonCells[12]    = Boss
 ```
 
 ## SpawnStartRoom
@@ -153,7 +165,7 @@ DungeonCells[12]   = Boss
 ✅ usa GetActorLocation del generador
 ✅ Make Transform con Rotation 0 y Scale 1,1,1
 ✅ valida SpawnActor Return Value
-✅ InitRoomFromCell una sola vez
+✅ Init Room from Cell una sola vez
 ✅ añade como SpawnedRooms[0]
 ```
 
@@ -170,21 +182,21 @@ Responsabilidad:
 
 ```text
 validar celda y link
-resolver Parent Cell Index
-resolver Parent Room Actor desde SpawnedRooms
-seleccionar clase según Room Type
-SpawnActor una sola vez
-Init Room from Cell una sola vez
-alinear DoorPoints padre-hija
-hacer reintentos
-comprobar overlap global
-aceptar o destruir la candidata
+→ resolver Parent Cell Index
+→ resolver Parent Room Actor desde SpawnedRooms
+→ seleccionar clase según Room Type
+→ SpawnActor una sola vez
+→ Init Room from Cell una sola vez
+→ alinear DoorPoints padre-hija
+→ hacer reintentos
+→ comprobar overlap global
+→ aceptar o destruir la candidata
 ```
 
-Clase por tipo:
+Clases actuales:
 
 ```text
-Normal → procedural común
+Normal → habitación procedural común
 Key    → BP_Room_PreBuilt_Base_Child_Key
 Boss   → BP_Room_PreBuilt_Base_Child_Boss
 Start  → error como hija
@@ -206,7 +218,7 @@ South → North
 West  → East
 ```
 
-`GetDirectionVector` Pure:
+`GetDirectionVector`:
 
 ```text
 North → ( 0,  1, 0)
@@ -215,7 +227,7 @@ South → ( 0, -1, 0)
 West  → (-1,  0, 0)
 ```
 
-## Placement y pasillo
+## Placement y reintentos
 
 ```text
 DesiredChildDoor =
@@ -227,8 +239,6 @@ ParentDoorLocation
 MoveDelta = DesiredChildDoor - ChildDoorLocation
 NewChildLocation = ChildRoomActor.GetActorLocation + MoveDelta
 ```
-
-En cada intento se vuelve a consultar `Child Door Location` después de mover el actor.
 
 Variables locales confirmadas:
 
@@ -247,46 +257,6 @@ bPlacement Succeeded   : Boolean
 Bounds Overlap         : Boolean
 ```
 
-Valores de prueba:
-
-```text
-Corridor Length = 1000
-Placement Retry Step = 500
-Max Placement Attempts = 10
-```
-
-## Reintentos controlados
-
-Se usa `For Loop with Break`:
-
-```text
-First Index = 0
-Last Index = Max Placement Attempts - 1
-```
-
-Si solapa:
-
-```text
-Corridor Length += Placement Retry Step
-→ siguiente intento
-```
-
-Si no solapa:
-
-```text
-bPlacementSucceeded = true
-→ Break
-→ añadir a SpawnedRooms
-```
-
-Si agota intentos:
-
-```text
-Print diagnóstico
-→ Destroy Actor
-→ Room Placed = false
-```
-
 Reglas:
 
 ```text
@@ -294,6 +264,7 @@ No repetir SpawnActor.
 No repetir Init Room from Cell.
 No regenerar HISM.
 Mover siempre la misma Child Room Actor.
+Volver a consultar Child Door Location en cada intento.
 ```
 
 ## DoesRoomOverlapPlacedRooms
@@ -305,9 +276,7 @@ Input : Candidate Room Actor
 Output: Overlaps Placed Rooms
 ```
 
-Recorre `SpawnedRooms`, ignora actores inválidos y la propia candidata, consulta bounds y aplica AABB.
-
-Fórmula:
+La función recorre `SpawnedRooms`, ignora actores inválidos y la propia candidata, consulta bounds y aplica AABB.
 
 ```text
 OverlapX = Abs(CandidateCenterX - PlacedCenterX)
@@ -318,58 +287,6 @@ OverlapZ = Abs(CandidateCenterZ - PlacedCenterZ)
            <= CandidateExtentZ + PlacedExtentZ
 Overlap = X AND Y AND Z
 ```
-
-`<=` considera contacto exacto como overlap.
-
-## BP_Room_PreBuilt_Base
-
-Contrato confirmado:
-
-```text
-BPI_DungeonRoomV2
-Init Room from Cell
-Get Door World Location
-Get Room Bounds Data
-DoorPoint_North
-DoorPoint_East
-DoorPoint_South
-DoorPoint_West
-RoomBounds
-```
-
-Implementación de bounds:
-
-```text
-RoomBounds
-→ Get Component Bounds
-   Origin      → Bounds Center
-   Box Extent  → Bounds Extent
-```
-
-Valores validados:
-
-```text
-Start prebuilt:        980,980,400
-Procedural de prueba:  995,995,420
-```
-
-## Error Key/Boss corregido
-
-La antigua `BP_Room_Debug_Key_C` devolvía:
-
-```text
-Candidate Center = 0,0,0
-Candidate Extent = 0,0,0
-```
-
-Se sustituyó por hijos de la base prebuilt:
-
-```text
-BP_Room_PreBuilt_Base_Child_Key
-BP_Room_PreBuilt_Base_Child_Boss
-```
-
-Ahora heredan interfaz, bounds y DoorPoints válidos.
 
 ## TryAddSpecialCellFromParent
 
@@ -401,8 +318,6 @@ bAdded = false
 New Cell Index = -1
 ```
 
-El índice de éxito se obtiene del `Return Value` de `DungeonCells → Add`.
-
 La función prueba las cuatro direcciones:
 
 ```text
@@ -416,76 +331,157 @@ La función prueba las cuatro direcciones:
 3 West
 ```
 
-Error corregido:
-
-```text
-INCORRECTO: división entre 4
-CORRECTO: módulo % 4
-```
+El índice de éxito sale del `Return Value` de `DungeonCells.Add`.
 
 ## ChooseKeyAndBossCells
 
-La búsqueda de candidatos se conserva, pero sus índices ahora representan padres normales:
+Los índices actuales representan padres normales seleccionados:
 
 ```text
 Key Cell Index  = padre seleccionado para Key
 Boss Cell Index = padre seleccionado para Boss
 ```
 
-Los antiguos `Set Array Elem` que convertían normales en Key/Boss quedaron desconectados.
-
-Al terminar:
+Flujo final:
 
 ```text
 Sequence.Then 0 → añadir Key
 Sequence.Then 1 → añadir Boss
 ```
 
-Boss comprueba ocupación después de añadir Key.
+Los antiguos `Set Array Elem` que convertían normales en Key/Boss están desconectados y pendientes de limpieza.
 
-## Seeds conocidas
+## BP_Room_PreBuilt_Base
 
-Corrección confirmada:
-
-```text
-Seed 12345 → South
-Seed 12346 → East
-```
-
-## Arquitectura híbrida
+Contrato confirmado:
 
 ```text
-Habitaciones normales/procedurales
-→ BP_RoomMaster_Dungeon
-→ HISM
-→ 1–4 conexiones
-→ abre solo las necesarias
-→ tapa paredes no usadas
+BPI_DungeonRoomV2
+Init Room from Cell
+Get Door World Location
+Get Room Bounds Data
+DoorPoint_North
+DoorPoint_East
+DoorPoint_South
+DoorPoint_West
+RoomBounds
 ```
+
+Bounds:
 
 ```text
-Habitaciones especiales prebuilt
-→ BP_Room_PreBuilt_Base y Blueprints hijos
-→ RoomBounds manual
-→ DoorPoints manuales
-→ Level Instance/Packed Level Blueprint futuro
+RoomBounds
+→ Get Component Bounds
+   Origin     → Bounds Center
+   Box Extent → Bounds Extent
 ```
 
-## Próxima fase — compatibilidad de puertas prebuilt
+Clases hijas confirmadas:
 
-Una habitación prebuilt no debe inventar puertas.
+```text
+BP_Room_PreBuilt_Base_Child_Key
+BP_Room_PreBuilt_Base_Child_Boss
+```
+
+## Limpieza confirmada
+
+`SpawnFirstChildRoom` fue el prototipo histórico para `ChildIndex = 1`.
+
+Antes de borrarlo:
+
+```text
+Find References
+→ solo se mostró la definición de la propia función
+→ no apareció ninguna llamada activa
+```
+
+Después de borrarlo:
+
+```text
+Blueprint compila
+la generación completa sigue funcionando
+13 habitaciones continúan apareciendo
+Start, Key y Boss siguen incluidas
+```
+
+La implementación activa que lo reemplaza es:
+
+```text
+PlaceChildRoomFromParent
+```
+
+Documento:
+
+```text
+sessions/2026-07-26_SPAWN_FIRST_CHILD_REMOVED.md
+```
+
+## Limpieza pendiente
+
+```text
+SpawnRoomsFromCells
+Set Array Elem antiguos de Key/Boss
+Print String temporales
+variables sin referencias
+nodos desconectados
+```
+
+Proceso obligatorio:
+
+```text
+Find References
+→ compilar
+→ prueba controlada
+→ borrar
+→ regresión
+```
+
+## Próxima fase — puertas físicas prebuilt
+
+Una habitación prefabricada no debe inventar puertas.
 
 Patrones previstos:
 
 ```text
-Dead End → 1
+Dead End → 1 puerta
 Straight → 2 opuestas
 Corner/L → 2 contiguas
 T        → 3
 Cross    → 4
 ```
 
-Se deberá validar clase + rotación 0/90/180/270 antes del spawn.
+Se deberá validar:
+
+```text
+clase compatible
++
+rotación compatible 0/90/180/270
+```
+
+Las habitaciones procedurales seguirán soportando 1–4 conexiones, abriendo solo las necesarias y tapando las paredes no usadas.
+
+## Pasillo procedural adaptable — plan V1
+
+Después de colocar todas las habitaciones:
+
+```text
+Parent DoorPoint
+→ distancia real
+→ Child DoorPoint
+→ pasillo recto adaptable
+```
+
+Primera versión prevista:
+
+```text
+suelo modular
+2 paredes
+techo opcional
+longitud automática
+sin spline obligatorio
+```
+
+Las futuras salas conectoras de parkour, trampas, puentes o mini combates se tratarán aparte.
 
 ## Partes protegidas
 
@@ -514,31 +510,11 @@ South → Arrow_Exit_North
 West  → Arrow_Exit_West
 ```
 
-## Limpieza pendiente
-
-No borrar hasta superar regresión:
-
-```text
-SpawnFirstChildRoom
-SpawnRoomsFromCells
-Set Array Elem antiguos Key/Boss
-Print String temporales
-variables sin referencias
-```
-
-Usar siempre:
-
-```text
-Find References
-→ compilar
-→ prueba controlada
-→ borrar
-→ regresión
-```
-
 ## Documentos actuales
 
 ```text
 docs/31_GENERACION_COMPLETA_Y_SALAS_ESPECIALES.md
 sessions/2026-07-25_GENERACION_COMPLETA_ESPECIALES.md
+sessions/2026-07-26_PHASE_H_REGRESSION_COMPLETE.md
+sessions/2026-07-26_SPAWN_FIRST_CHILD_REMOVED.md
 ```
