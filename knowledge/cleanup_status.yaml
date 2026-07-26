@@ -25,14 +25,31 @@ removed_and_validated:
     key_present: true
     boss_present: true
 
+  - name: "Legacy Key/Boss Set Array Elem blocks"
+    kind: "disconnected Blueprint nodes"
+    replacement: "TryAddSpecialCellFromParent called for Key and Boss"
+    old_behavior: "Changed existing Normal cells into Key/Boss"
+    current_behavior: "Adds Key and Boss as new cells after the Normal layout"
+    removed: true
+    full_generation_still_works: true
+    confirmed_total_rooms: 13
+    normal_rooms_preserved: 10
+    start_present: true
+    key_present: true
+    boss_present: true
+
 active_spawn_flow:
   - "GenerateDungeon"
   - "SpawnStartRoom"
   - "For Loop with Break: index 1 to DungeonCells.Length - 1"
   - "PlaceChildRoomFromParent(Index)"
 
+active_special_flow:
+  - "Choose normal parent candidates for Key and Boss"
+  - "TryAddSpecialCellFromParent(Key Cell Index, Key)"
+  - "TryAddSpecialCellFromParent(Boss Cell Index, Boss)"
+
 pending_cleanup:
-  - "Legacy Key/Boss Set Array Elem blocks"
   - "Temporary Print String diagnostics"
   - "Unused local/member variables after Find References"
   - "Remaining disconnected nodes"
