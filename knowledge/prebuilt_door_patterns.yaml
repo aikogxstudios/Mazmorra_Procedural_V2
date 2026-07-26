@@ -1,0 +1,39 @@
+schema_version: 1
+last_updated: "2026-07-26"
+
+system: "Fixed physical door compatibility for handcrafted prebuilt rooms"
+status: "enum_created"
+
+enum:
+  name: "E_PreBuiltDoorPattern"
+  status: "confirmed_created_in_unreal"
+  entries:
+    - "DeadEnd"
+    - "Straight"
+    - "Corner"
+    - "TShape"
+    - "Cross"
+
+canonical_local_patterns:
+  DeadEnd: ["North"]
+  Straight: ["North", "South"]
+  Corner: ["North", "East"]
+  TShape: ["North", "East", "West"]
+  Cross: ["North", "East", "South", "West"]
+
+rotation_plan:
+  allowed_degrees: [0, 90, 180, 270]
+  example_corner:
+    0: ["North", "East"]
+    90: ["East", "South"]
+    180: ["South", "West"]
+    270: ["West", "North"]
+
+compatibility_rule: "A fixed prebuilt room is valid only when its rotated physical doors exactly match the North/East/South/West connections required by ST_DungeonCell."
+
+protected_current_behavior:
+  - "BP_Room_PreBuilt_Base remains flexible for current Start/Key/Boss prototypes"
+  - "BP_RoomMaster_Dungeon remains procedural and opens only required walls"
+  - "No integration into PlaceChildRoomFromParent until pattern matching is tested separately"
+
+next_step: "Add metadata to BP_Room_PreBuilt_Base that distinguishes flexible legacy rooms from fixed-pattern handcrafted rooms."
