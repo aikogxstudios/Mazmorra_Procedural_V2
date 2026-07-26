@@ -2,7 +2,7 @@ schema_version: 1
 last_updated: "2026-07-26"
 
 system: "Fixed physical door compatibility for handcrafted prebuilt rooms"
-status: "enum_and_base_metadata_created"
+status: "corner_test_asset_created"
 
 enum:
   name: "E_PreBuiltDoorPattern"
@@ -29,6 +29,15 @@ BP_Room_PreBuilt_Base:
       status: "confirmed_created"
       purpose: "Declares the physical door shape of a fixed handcrafted room."
 
+corner_test_asset:
+  name: "BP_Room_PreBuilt_Test_Corner"
+  parent: "BP_Room_PreBuilt_Base"
+  status: "confirmed_created_and_saved"
+  bUseFixedDoorPattern: true
+  DoorPattern: "Corner"
+  integration_status: "isolated_not_used_by_generator"
+  visual_note: "Handcrafted L/corner prototype visible in editor; exact world-facing door directions still require DoorPoint verification."
+
 canonical_local_patterns:
   DeadEnd: ["North"]
   Straight: ["North", "South"]
@@ -54,4 +63,4 @@ protected_current_behavior:
   - "Init Room from Cell has not been modified"
   - "PlaceChildRoomFromParent has not been modified"
 
-next_step: "Create an isolated Corner test child from BP_Room_PreBuilt_Base and mark it as fixed-pattern metadata only."
+next_step: "Verify the Corner test asset's local DoorPoint_North and DoorPoint_East correspond to the real physical openings before implementing pattern-matching logic."
