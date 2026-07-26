@@ -2,6 +2,62 @@
 
 Todos los cambios técnicos importantes deben reflejarse también en `docs/00_ESTADO_ACTUAL.md`.
 
+## 2026-07-26 — Regresión final de Fase H y primera limpieza
+
+### Validado
+
+```text
+Seed 12345 → South → 13 habitaciones sin fallos
+Seed 12346 → East  → 13 habitaciones sin fallos
+```
+
+En ambas pruebas:
+
+```text
+1 Start
+10 Normal
+1 Key
+1 Boss
+sin SPECIAL FAILED
+sin Max Placement Attempts reached
+sin solapamientos visibles
+```
+
+### Eliminado
+
+- `SpawnFirstChildRoom` fue eliminado de `BP_DungeonGenerator_V2`.
+- Antes de borrarlo se ejecutó `Find References` y solo apareció la definición de la propia función.
+- Después de eliminarlo, el Blueprint compiló y la generación completa siguió funcionando.
+
+### Confirmado
+
+```text
+GenerateDungeon
+→ SpawnStartRoom
+→ For Loop with Break
+→ PlaceChildRoomFromParent(Index)
+```
+
+`PlaceChildRoomFromParent` es ahora la única función activa encargada del spawn, inicialización, colocación, reintentos y aceptación de todas las habitaciones hijas.
+
+### Documentación
+
+- Añadido `sessions/2026-07-26_PHASE_H_REGRESSION_COMPLETE.md`.
+- Añadido `sessions/2026-07-26_SPAWN_FIRST_CHILD_REMOVED.md`.
+- Issue #7 cerrada como completada.
+
+### Limpieza pendiente
+
+```text
+SpawnRoomsFromCells
+Set Array Elem antiguos de Key/Boss
+Print String temporales
+variables sin referencias
+nodos desconectados
+```
+
+---
+
 ## 2026-07-25 — Generación física completa y salas especiales adicionales
 
 ### Añadido
