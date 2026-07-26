@@ -1,0 +1,45 @@
+schema_version: 1
+last_updated: "2026-07-26"
+blueprint: "BP_DungeonGenerator_V2"
+
+cleanup_phase:
+  status: "active"
+  rule: "Find References -> compile -> test -> delete -> regression"
+
+removed_and_validated:
+  - name: "SpawnFirstChildRoom"
+    kind: "function"
+    replacement: "PlaceChildRoomFromParent"
+    references_before_delete: "Only own definition was shown"
+    blueprint_compiles: true
+    full_generation_still_works: true
+    confirmed_total_rooms: 13
+
+  - name: "SpawnRoomsFromCells"
+    kind: "function"
+    replacement: "SpawnStartRoom + PlaceChildRoomFromParent loop"
+    blueprint_compiles: true
+    full_generation_still_works: true
+    confirmed_total_rooms: 13
+    start_present: true
+    key_present: true
+    boss_present: true
+
+active_spawn_flow:
+  - "GenerateDungeon"
+  - "SpawnStartRoom"
+  - "For Loop with Break: index 1 to DungeonCells.Length - 1"
+  - "PlaceChildRoomFromParent(Index)"
+
+pending_cleanup:
+  - "Legacy Key/Boss Set Array Elem blocks"
+  - "Temporary Print String diagnostics"
+  - "Unused local/member variables after Find References"
+  - "Remaining disconnected nodes"
+
+protected:
+  - "PlaceChildRoomFromParent"
+  - "DoesRoomOverlapPlacedRooms"
+  - "TryAddSpecialCellFromParent"
+  - "SpawnStartRoom"
+  - "DungeonCells[Index] = DungeonCellLinks[Index] = SpawnedRooms[Index]"
