@@ -2,17 +2,26 @@ schema_version: 1
 last_updated: "2026-07-26"
 
 system: "Fixed physical door compatibility for handcrafted prebuilt rooms"
-status: "corner_test_asset_created"
+status: "corner_pattern_and_base_rotation_confirmed"
 
-enum:
-  name: "E_PreBuiltDoorPattern"
-  status: "confirmed_created_in_unreal"
-  entries:
-    - "DeadEnd"
-    - "Straight"
-    - "Corner"
-    - "TShape"
-    - "Cross"
+enums:
+  door_pattern:
+    name: "E_PreBuiltDoorPattern"
+    status: "confirmed_created_in_unreal"
+    entries:
+      - "DeadEnd"
+      - "Straight"
+      - "Corner"
+      - "TShape"
+      - "Cross"
+  door_rotation:
+    name: "E_PreBuiltDoorRotation"
+    status: "confirmed_created_in_unreal"
+    entries:
+      - "Rot0"
+      - "Rot90"
+      - "Rot180"
+      - "Rot270"
 
 BP_Room_PreBuilt_Base:
   variables:
@@ -28,6 +37,12 @@ BP_Room_PreBuilt_Base:
       default: "DeadEnd"
       status: "confirmed_created"
       purpose: "Declares the physical door shape of a fixed handcrafted room."
+    DoorPatternBaseRotation:
+      type: "E_PreBuiltDoorRotation"
+      category: "PreBuilt Doors"
+      default: "Rot0"
+      status: "confirmed_created"
+      purpose: "Declares the local orientation in which the handcrafted physical openings were built."
 
 corner_test_asset:
   name: "BP_Room_PreBuilt_Test_Corner"
@@ -35,8 +50,9 @@ corner_test_asset:
   status: "confirmed_created_and_saved"
   bUseFixedDoorPattern: true
   DoorPattern: "Corner"
+  DoorPatternBaseRotation: "Rot180"
+  physical_openings_local: ["South", "West"]
   integration_status: "isolated_not_used_by_generator"
-  visual_note: "Handcrafted L/corner prototype visible in editor; exact world-facing door directions still require DoorPoint verification."
 
 canonical_local_patterns:
   DeadEnd: ["North"]
@@ -45,14 +61,14 @@ canonical_local_patterns:
   TShape: ["North", "East", "West"]
   Cross: ["North", "East", "South", "West"]
 
-rotation_plan:
+rotation_mapping:
   allowed_degrees: [0, 90, 180, 270]
-  status: "conceptual_not_implemented"
-  example_corner:
-    0: ["North", "East"]
-    90: ["East", "South"]
-    180: ["South", "West"]
-    270: ["West", "North"]
+  corner:
+    Rot0: ["North", "East"]
+    Rot90: ["East", "South"]
+    Rot180: ["South", "West"]
+    Rot270: ["West", "North"]
+  status: "metadata_confirmed_matching_logic_not_implemented"
 
 compatibility_rule: "A fixed prebuilt room is valid only when its rotated physical doors exactly match the North/East/South/West connections required by ST_DungeonCell."
 
@@ -63,4 +79,4 @@ protected_current_behavior:
   - "Init Room from Cell has not been modified"
   - "PlaceChildRoomFromParent has not been modified"
 
-next_step: "Verify the Corner test asset's local DoorPoint_North and DoorPoint_East correspond to the real physical openings before implementing pattern-matching logic."
+next_step: "Create an isolated pure helper that returns the physical North/East/South/West booleans represented by a door pattern plus base rotation."
