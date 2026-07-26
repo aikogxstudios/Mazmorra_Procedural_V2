@@ -1,0 +1,183 @@
+schema_version: 1
+last_updated: "2026-07-26"
+
+system: "Fixed prebuilt door patterns and Normal room pool V1"
+status: "metadata_created_function_signature_created_logic_pending"
+
+confirmed_assets:
+  enums:
+    E_PreBuiltDoorPattern:
+      status: "confirmed_created"
+      entries:
+        - "DeadEnd"
+        - "Straight"
+        - "Corner"
+        - "TShape"
+        - "Cross"
+    E_PreBuiltDoorRotation:
+      status: "confirmed_created"
+      entries:
+        - "Rot0"
+        - "Rot90"
+        - "Rot180"
+        - "Rot270"
+
+  BP_Room_PreBuilt_Base:
+    status: "confirmed_metadata_added"
+    variables:
+      bUseFixedDoorPattern:
+        type: "Boolean"
+        category: "PreBuilt Doors"
+        default: false
+        purpose: "Preserve flexible WallFill behavior when false; mark fixed physical doors when true."
+      DoorPattern:
+        type: "E_PreBuiltDoorPattern"
+        category: "PreBuilt Doors"
+        default: "DeadEnd"
+      DoorPatternBaseRotation:
+        type: "E_PreBuiltDoorRotation"
+        category: "PreBuilt Doors"
+        default: "Rot0"
+
+  BP_Room_PreBuilt_Test_Corner:
+    parent: "BP_Room_PreBuilt_Base"
+    status: "confirmed_created_isolated"
+    bUseFixedDoorPattern: true
+    DoorPattern: "Corner"
+    DoorPatternBaseRotation: "Rot180"
+    physical_local_openings:
+      - "South"
+      - "West"
+    generator_integration: false
+
+  BP_DungeonGenerator_V2:
+    functions:
+      GetPreBuiltPatternDoors:
+        pure: true
+        status: "signature_created_internal_logic_pending"
+        inputs:
+          Door_Pattern: "E_PreBuiltDoorPattern"
+          Base_Rotation: "E_PreBuiltDoorRotation"
+        outputs:
+          North: "Boolean"
+          East: "Boolean"
+          South: "Boolean"
+          West: "Boolean"
+        first_required_test:
+          Door_Pattern: "Corner"
+          Base_Rotation: "Rot180"
+          expected:
+            North: false
+            East: false
+            South: true
+            West: true
+
+canonical_patterns:
+  DeadEnd:
+    Rot0: ["North"]
+    Rot90: ["East"]
+    Rot180: ["South"]
+    Rot270: ["West"]
+  Straight:
+    Rot0: ["North", "South"]
+    Rot90: ["East", "West"]
+    Rot180: ["North", "South"]
+    Rot270: ["East", "West"]
+  Corner:
+    Rot0: ["North", "East"]
+    Rot90: ["East", "South"]
+    Rot180: ["South", "West"]
+    Rot270: ["West", "North"]
+  TShape:
+    Rot0: ["North", "East", "West"]
+    Rot90: ["North", "East", "South"]
+    Rot180: ["East", "South", "West"]
+    Rot270: ["North", "South", "West"]
+  Cross:
+    Rot0: ["North", "East", "South", "West"]
+    Rot90: ["North", "East", "South", "West"]
+    Rot180: ["North", "East", "South", "West"]
+    Rot270: ["North", "East", "South", "West"]
+
+compatibility_rule:
+  type: "exact_boolean_match"
+  formula: "PhysicalNorth == CellNorth AND PhysicalEast == CellEast AND PhysicalSouth == CellSouth AND PhysicalWest == CellWest"
+  partial_match_allowed: false
+  extra_physical_doors_allowed: false
+
+accepted_architecture:
+  generation_order:
+    - "Build logical DungeonCells and DungeonCellLinks"
+    - "Read exact required cell connections"
+    - "Filter compatible Normal room candidates"
+    - "Choose candidate with RandomStream and weights"
+    - "Apply compatible 90-degree rotation"
+    - "Spawn and initialize once"
+    - "Align real DoorPoints"
+    - "Validate RoomBounds and overlap"
+  normal_room_families:
+    procedural_flexible:
+      class: "BP_RoomMaster_Dungeon"
+      role: "Variable-size common room and safe fallback"
+      supports_connections: "1-4"
+    fixed_prebuilt:
+      role: "Handcrafted physical variation"
+      requirements:
+        - "Real physical openings"
+        - "Manual DoorPoints"
+        - "Manual RoomBounds"
+        - "Exact pattern and rotation compatibility"
+  fallback_required: true
+
+normal_room_pool_v1:
+  status: "conceptual_not_created"
+  minimum_candidate_fields:
+    - "Room Class"
+    - "bIsFlexible"
+    - "Door Pattern"
+    - "Weight"
+    - "bCanRotate"
+  possible_later_fields:
+    - "Room Category"
+    - "Gameplay Type"
+    - "Vertical Transition"
+    - "Biome Tags"
+    - "Difficulty Range"
+  first_content_target:
+    - "One Corner/L prebuilt"
+    - "One Straight or narrow corridor prebuilt"
+    - "One DeadEnd prebuilt"
+    - "Multiple procedural flexible rooms with random size"
+  evaluation:
+    - "Generate several seeds"
+    - "Check pacing and visual repetition"
+    - "Check turns and branches"
+    - "Check room separation"
+    - "Check overall dungeon feeling"
+
+verticality:
+  status: "accepted_conceptual_future"
+  possible_layout_fields:
+    - "GridZ"
+    - "FloorLevel"
+  rule: "Stairs, ramps and elevated exits must change logical layout height, not be visual decoration only."
+  implement_after: "Horizontal Normal room pool V1 is validated"
+
+protected_current_behavior:
+  - "BP_RoomMaster_Dungeon remains unchanged"
+  - "Init Room from Cell remains unchanged"
+  - "Get Door World Location mappings remain unchanged"
+  - "PlaceChildRoomFromParent remains unchanged"
+  - "Current Start/Key/Boss prototypes remain flexible"
+  - "bUseFixedDoorPattern remains false by default"
+  - "BP_Room_PreBuilt_Test_Corner remains outside generation"
+
+next_session:
+  first_action: "Open BP_DungeonGenerator_V2.GetPreBuiltPatternDoors and provide a screenshot of its current empty graph and signature."
+  implementation_order:
+    - "Implement only Corner mapping first"
+    - "Test Corner + Rot180 returns South and West"
+    - "Complete DeadEnd, Straight, TShape and Cross"
+    - "Validate all rotations"
+    - "Create exact cell compatibility function"
+    - "Only then begin generator integration"
