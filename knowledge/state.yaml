@@ -39,8 +39,9 @@ current_phase:
     - "Prebuilt Key and Boss children with valid bounds"
     - "13 physical rooms with Max Rooms 10"
     - "Final Phase H regression with seeds 12345 and 12346"
+    - "SpawnFirstChildRoom safely removed after Find References and successful regression"
   active: "Controlled cleanup and prebuilt door-pattern compatibility"
-  next: "Use Find References before deleting legacy nodes, then implement fixed-door pattern and rotation matching for prebuilt rooms; begin adaptive procedural corridor if time permits"
+  next: "Continue Find References cleanup, then implement fixed-door pattern and rotation matching for prebuilt rooms; begin adaptive procedural corridor if time permits"
 
 validated_room_counts_historical: [10, 15, 20, 50, 150]
 
@@ -144,6 +145,19 @@ place_child_room_from_parent:
     - "Do not Init Room from Cell again"
     - "Do not regenerate HISM"
     - "Requery Child Door Location every attempt"
+
+spawn_first_child_room_cleanup:
+  status: "removed_confirmed"
+  previous_role: "Historical ChildIndex 1 prototype for placement, AABB, retries and global overlap"
+  replacement: "PlaceChildRoomFromParent"
+  find_references_result: "Only the function definition was visible; no active call found"
+  post_delete_test:
+    compiled: true
+    full_generation_working: true
+    total_rooms: 13
+    key_present: true
+    boss_present: true
+  documentation: "sessions/2026-07-26_SPAWN_FIRST_CHILD_REMOVED.md"
 
 placement_formula:
   desired_child_door: "ParentDoorLocation + GetDirectionVector(ParentDirection) * CorridorLength"
@@ -272,12 +286,15 @@ critical_mappings:
     South: "Arrow_Exit_North"
     West: "Arrow_Exit_West"
 
+cleanup_completed:
+  - "SpawnFirstChildRoom removed after Find References and successful regression"
+
 cleanup_pending:
-  - "SpawnFirstChildRoom"
   - "SpawnRoomsFromCells"
   - "Legacy Key/Boss Set Array Elem blocks"
   - "Temporary Print String diagnostics"
   - "Unused variables after Find References"
+  - "Disconnected nodes after reference checks"
 
 memory_policy:
   repository_is_official_memory: true
@@ -290,6 +307,6 @@ memory_policy:
 
 session_close:
   date: "2026-07-26"
-  handoff_file: "sessions/2026-07-25_GENERACION_COMPLETA_ESPECIALES.md"
+  handoff_file: "sessions/2026-07-26_SPAWN_FIRST_CHILD_REMOVED.md"
   detailed_document: "docs/31_GENERACION_COMPLETA_Y_SALAS_ESPECIALES.md"
-  status: "Phase H closed after regression; next is cleanup, prebuilt door patterns and adaptive corridor V1"
+  status: "Phase H closed; SpawnFirstChildRoom removed safely; next is remaining cleanup, prebuilt door patterns and adaptive corridor V1"
