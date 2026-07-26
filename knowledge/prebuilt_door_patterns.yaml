@@ -2,7 +2,7 @@ schema_version: 1
 last_updated: "2026-07-26"
 
 system: "Fixed physical door compatibility for handcrafted prebuilt rooms"
-status: "enum_created"
+status: "enum_and_base_metadata_created"
 
 enum:
   name: "E_PreBuiltDoorPattern"
@@ -14,6 +14,21 @@ enum:
     - "TShape"
     - "Cross"
 
+BP_Room_PreBuilt_Base:
+  variables:
+    bUseFixedDoorPattern:
+      type: "Boolean"
+      category: "PreBuilt Doors"
+      default: false
+      status: "confirmed_created"
+      purpose: "False preserves the flexible WallFill system; true marks a handcrafted room with fixed physical doors."
+    DoorPattern:
+      type: "E_PreBuiltDoorPattern"
+      category: "PreBuilt Doors"
+      default: "DeadEnd"
+      status: "confirmed_created"
+      purpose: "Declares the physical door shape of a fixed handcrafted room."
+
 canonical_local_patterns:
   DeadEnd: ["North"]
   Straight: ["North", "South"]
@@ -23,6 +38,7 @@ canonical_local_patterns:
 
 rotation_plan:
   allowed_degrees: [0, 90, 180, 270]
+  status: "conceptual_not_implemented"
   example_corner:
     0: ["North", "East"]
     90: ["East", "South"]
@@ -32,8 +48,10 @@ rotation_plan:
 compatibility_rule: "A fixed prebuilt room is valid only when its rotated physical doors exactly match the North/East/South/West connections required by ST_DungeonCell."
 
 protected_current_behavior:
-  - "BP_Room_PreBuilt_Base remains flexible for current Start/Key/Boss prototypes"
-  - "BP_RoomMaster_Dungeon remains procedural and opens only required walls"
-  - "No integration into PlaceChildRoomFromParent until pattern matching is tested separately"
+  - "bUseFixedDoorPattern remains false by default"
+  - "Current Start/Key/Boss prototypes remain flexible"
+  - "BP_RoomMaster_Dungeon remains procedural"
+  - "Init Room from Cell has not been modified"
+  - "PlaceChildRoomFromParent has not been modified"
 
-next_step: "Add metadata to BP_Room_PreBuilt_Base that distinguishes flexible legacy rooms from fixed-pattern handcrafted rooms."
+next_step: "Create an isolated Corner test child from BP_Room_PreBuilt_Base and mark it as fixed-pattern metadata only."
