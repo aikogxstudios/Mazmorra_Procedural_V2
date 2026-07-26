@@ -27,8 +27,10 @@ Este archivo es la referencia operativa principal. Cuando exista una contradicci
 ✅ Key y Boss añadidas como salas especiales adicionales.
 ✅ Max Rooms cuenta solo habitaciones Normal.
 ✅ Regresión final con seeds 12345 y 12346.
-✅ SpawnFirstChildRoom eliminado después de Find References y prueba posterior.
-⏳ Limpieza controlada restante.
+✅ SpawnFirstChildRoom eliminado y validado.
+✅ SpawnRoomsFromCells eliminado y validado.
+✅ Set Array Elem antiguos de Key/Boss eliminados y validados.
+⏳ Limpieza controlada de prints, variables y nodos restantes.
 ⏳ Compatibilidad de puertas físicas para habitaciones prebuilt.
 🔮 Pasillo procedural adaptable entre DoorPoints.
 ```
@@ -138,15 +140,7 @@ Max Rooms = cantidad de habitaciones Normal
 Max Rooms + 1
 ```
 
-El `+1` representa Start.
-
-Las habitaciones especiales se añaden después y no consumen ese límite:
-
-```text
-Key
-Boss
-futuros Room Types especiales
-```
+El `+1` representa Start. Las habitaciones especiales se añaden después y no consumen ese límite.
 
 Ejemplo actual:
 
@@ -165,7 +159,7 @@ DungeonCells[12]    = Boss
 ✅ usa GetActorLocation del generador
 ✅ Make Transform con Rotation 0 y Scale 1,1,1
 ✅ valida SpawnActor Return Value
-✅ Init Room from Cell una sola vez
+✅ InitRoomFromCell una sola vez
 ✅ añade como SpawnedRooms[0]
 ```
 
@@ -342,14 +336,14 @@ Key Cell Index  = padre seleccionado para Key
 Boss Cell Index = padre seleccionado para Boss
 ```
 
-Flujo final:
+Flujo vigente:
 
 ```text
-Sequence.Then 0 → añadir Key
-Sequence.Then 1 → añadir Boss
+Sequence.Then 0 → TryAddSpecialCellFromParent(Key Cell Index, Key)
+Sequence.Then 1 → TryAddSpecialCellFromParent(Boss Cell Index, Boss)
 ```
 
-Los antiguos `Set Array Elem` que convertían normales en Key/Boss están desconectados y pendientes de limpieza.
+Los antiguos `Set Array Elem` que convertían habitaciones Normal en Key/Boss fueron eliminados. Ya no existe una ruta que sustituya habitaciones normales.
 
 ## BP_Room_PreBuilt_Base
 
@@ -385,45 +379,40 @@ BP_Room_PreBuilt_Base_Child_Boss
 
 ## Limpieza confirmada
 
-`SpawnFirstChildRoom` fue el prototipo histórico para `ChildIndex = 1`.
-
-Antes de borrarlo:
+Eliminado y probado:
 
 ```text
-Find References
-→ solo se mostró la definición de la propia función
-→ no apareció ninguna llamada activa
+SpawnFirstChildRoom
+SpawnRoomsFromCells
+Set Array Elem antiguos de Key/Boss
 ```
 
-Después de borrarlo:
+Después de estas eliminaciones:
 
 ```text
 Blueprint compila
 la generación completa sigue funcionando
 13 habitaciones continúan apareciendo
 Start, Key y Boss siguen incluidas
+10 habitaciones Normal se conservan
 ```
 
-La implementación activa que lo reemplaza es:
+Implementación activa:
 
 ```text
+SpawnStartRoom
++
 PlaceChildRoomFromParent
-```
-
-Documento:
-
-```text
-sessions/2026-07-26_SPAWN_FIRST_CHILD_REMOVED.md
++
+TryAddSpecialCellFromParent
 ```
 
 ## Limpieza pendiente
 
 ```text
-SpawnRoomsFromCells
-Set Array Elem antiguos de Key/Boss
 Print String temporales
-variables sin referencias
-nodos desconectados
+variables locales o miembro sin referencias
+nodos desconectados restantes
 ```
 
 Proceso obligatorio:
@@ -517,4 +506,7 @@ docs/31_GENERACION_COMPLETA_Y_SALAS_ESPECIALES.md
 sessions/2026-07-25_GENERACION_COMPLETA_ESPECIALES.md
 sessions/2026-07-26_PHASE_H_REGRESSION_COMPLETE.md
 sessions/2026-07-26_SPAWN_FIRST_CHILD_REMOVED.md
+sessions/2026-07-26_SPAWN_ROOMS_FROM_CELLS_REMOVED.md
+sessions/2026-07-26_LEGACY_KEY_BOSS_SET_ARRAY_REMOVED.md
+knowledge/cleanup_status.yaml
 ```
