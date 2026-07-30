@@ -2,7 +2,7 @@ schema_version: 1
 last_updated: "2026-07-30"
 
 system: "Fixed physical door compatibility for handcrafted prebuilt rooms"
-status: "pattern_door_resolver_implemented_and_tested"
+status: "pattern_resolver_and_exact_cell_match_tested"
 
 enums:
   door_pattern:
@@ -113,6 +113,36 @@ GetPreBuiltPatternDoors:
       West: true
     result: "confirmed"
 
+DoesPreBuiltPatternMatchCell:
+  owner: "BP_DungeonGenerator_V2"
+  status: "compiled_and_isolated_tested"
+  inputs:
+    Door_Pattern: "E_PreBuiltDoorPattern"
+    Base_Rotation: "E_PreBuiltDoorRotation"
+    Cell_Data: "ST_DungeonCell"
+  output:
+    Matches_Cell: "Boolean"
+  implementation:
+    - "Call GetPreBuiltPatternDoors"
+    - "Break ST_DungeonCell"
+    - "Compare North, East, South and West with Equal Boolean"
+    - "Combine all four comparisons with AND"
+  isolated_tests:
+    exact_match:
+      pattern: "Corner"
+      base_rotation: "Rot180"
+      cell_doors: ["South", "West"]
+      expected: true
+      actual: true
+      result: "confirmed"
+    incompatible_cell:
+      pattern: "Corner"
+      base_rotation: "Rot180"
+      cell_doors: ["South"]
+      expected: false
+      actual: false
+      result: "confirmed"
+
 compatibility_rule: "A fixed prebuilt room is valid only when its physical North/East/South/West doors exactly match the connections required by ST_DungeonCell."
 
 protected_current_behavior:
@@ -122,4 +152,4 @@ protected_current_behavior:
   - "Init Room from Cell has not been modified"
   - "PlaceChildRoomFromParent has not been modified"
 
-next_step: "Create an isolated helper that compares GetPreBuiltPatternDoors outputs against ST_DungeonCell North/East/South/West and returns one exact-match Boolean. First MVP integration may accept only the authored local orientation before adding actor placement rotation."
+next_step: "Integrate BP_Room_PreBuilt_Test_Corner into the Normal room class-selection path as the first fixed prebuilt candidate, initially only when its authored South+West doors exactly match the cell. Keep BP_RoomMaster_Dungeon as fallback. Inspect the current class-selection section of PlaceChildRoomFromParent before wiring."
