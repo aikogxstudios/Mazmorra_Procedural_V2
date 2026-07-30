@@ -1,8 +1,8 @@
 schema_version: 1
-last_updated: "2026-07-26"
+last_updated: "2026-07-30"
 
 system: "Fixed physical door compatibility for handcrafted prebuilt rooms"
-status: "corner_pattern_and_base_rotation_confirmed"
+status: "pattern_door_resolver_implemented_and_tested"
 
 enums:
   door_pattern:
@@ -63,14 +63,57 @@ canonical_local_patterns:
 
 rotation_mapping:
   allowed_degrees: [0, 90, 180, 270]
-  corner:
+  DeadEnd:
+    Rot0: ["North"]
+    Rot90: ["East"]
+    Rot180: ["South"]
+    Rot270: ["West"]
+  Straight:
+    Rot0: ["North", "South"]
+    Rot90: ["East", "West"]
+    Rot180: ["North", "South"]
+    Rot270: ["East", "West"]
+  Corner:
     Rot0: ["North", "East"]
     Rot90: ["East", "South"]
     Rot180: ["South", "West"]
     Rot270: ["West", "North"]
-  status: "metadata_confirmed_matching_logic_not_implemented"
+  TShape:
+    Rot0: ["North", "East", "West"]
+    Rot90: ["North", "East", "South"]
+    Rot180: ["East", "South", "West"]
+    Rot270: ["North", "South", "West"]
+  Cross:
+    Rot0: ["North", "East", "South", "West"]
+    Rot90: ["North", "East", "South", "West"]
+    Rot180: ["North", "East", "South", "West"]
+    Rot270: ["North", "East", "South", "West"]
+  status: "implemented_in_GetPreBuiltPatternDoors"
 
-compatibility_rule: "A fixed prebuilt room is valid only when its rotated physical doors exactly match the North/East/South/West connections required by ST_DungeonCell."
+GetPreBuiltPatternDoors:
+  owner: "BP_DungeonGenerator_V2"
+  status: "compiled_and_runtime_tested"
+  inputs:
+    Door_Pattern: "E_PreBuiltDoorPattern"
+    Base_Rotation: "E_PreBuiltDoorRotation"
+  outputs:
+    North: "Boolean"
+    East: "Boolean"
+    South: "Boolean"
+    West: "Boolean"
+  implementation: "Switch on E_PreBuiltDoorPattern followed by Switch on E_PreBuiltDoorRotation and explicit Return Nodes."
+  isolated_test:
+    input:
+      Door_Pattern: "Corner"
+      Base_Rotation: "Rot180"
+    output:
+      North: false
+      East: false
+      South: true
+      West: true
+    result: "confirmed"
+
+compatibility_rule: "A fixed prebuilt room is valid only when its physical North/East/South/West doors exactly match the connections required by ST_DungeonCell."
 
 protected_current_behavior:
   - "bUseFixedDoorPattern remains false by default"
@@ -79,4 +122,4 @@ protected_current_behavior:
   - "Init Room from Cell has not been modified"
   - "PlaceChildRoomFromParent has not been modified"
 
-next_step: "Create an isolated pure helper that returns the physical North/East/South/West booleans represented by a door pattern plus base rotation."
+next_step: "Create an isolated helper that compares GetPreBuiltPatternDoors outputs against ST_DungeonCell North/East/South/West and returns one exact-match Boolean. First MVP integration may accept only the authored local orientation before adding actor placement rotation."
