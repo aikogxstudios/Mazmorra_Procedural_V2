@@ -1,27 +1,27 @@
 schema_version: 1
-last_updated: "2026-07-30"
+last_updated: "2026-08-02"
 
 system: "Fixed physical door compatibility for handcrafted prebuilt rooms"
-status: "pattern_resolver_and_exact_cell_match_tested"
+status: "paused_after_partial_corner_integration"
+
+pause_decision:
+  active: true
+  reason:
+    - "The base 13-room dungeon is stable again."
+    - "Corner selection and spawning work partially, but final visual orientation is not yet proven."
+    - "Adding more conversion functions now increases complexity and regression risk."
+  rule: "Do not add another rotation or local-door helper until the approach is reviewed and simplified."
+  handoff: "sessions/2026-08-02_CORNER_ROTATION_INTEGRATION_PAUSED.md"
 
 enums:
   door_pattern:
     name: "E_PreBuiltDoorPattern"
     status: "confirmed_created_in_unreal"
-    entries:
-      - "DeadEnd"
-      - "Straight"
-      - "Corner"
-      - "TShape"
-      - "Cross"
+    entries: ["DeadEnd", "Straight", "Corner", "TShape", "Cross"]
   door_rotation:
     name: "E_PreBuiltDoorRotation"
     status: "confirmed_created_in_unreal"
-    entries:
-      - "Rot0"
-      - "Rot90"
-      - "Rot180"
-      - "Rot270"
+    entries: ["Rot0", "Rot90", "Rot180", "Rot270"]
 
 BP_Room_PreBuilt_Base:
   variables:
@@ -30,29 +30,34 @@ BP_Room_PreBuilt_Base:
       category: "PreBuilt Doors"
       default: false
       status: "confirmed_created"
-      purpose: "False preserves the flexible WallFill system; true marks a handcrafted room with fixed physical doors."
     DoorPattern:
       type: "E_PreBuiltDoorPattern"
       category: "PreBuilt Doors"
       default: "DeadEnd"
       status: "confirmed_created"
-      purpose: "Declares the physical door shape of a fixed handcrafted room."
     DoorPatternBaseRotation:
       type: "E_PreBuiltDoorRotation"
       category: "PreBuilt Doors"
       default: "Rot0"
       status: "confirmed_created"
-      purpose: "Declares the local orientation in which the handcrafted physical openings were built."
+  inherited_functions:
+    - "Get Room Bounds Data"
+    - "Get Door World Location"
+    - "Init Room from Cell"
+  child_override_rule: "Do not create empty overrides in children. Empty overrides replace inherited logic and return default zero outputs."
 
 corner_test_asset:
   name: "BP_Room_PreBuilt_Test_Corner"
   parent: "BP_Room_PreBuilt_Base"
-  status: "confirmed_created_and_saved"
+  status: "integrated_experimentally_but_orientation_unresolved"
   bUseFixedDoorPattern: true
   DoorPattern: "Corner"
   DoorPatternBaseRotation: "Rot180"
   physical_openings_local: ["South", "West"]
-  integration_status: "isolated_not_used_by_generator"
+  bounds_override_bug_fixed: true
+  can_spawn: true
+  can_return_valid_bounds: true
+  final_visual_orientation_validated: false
 
 canonical_local_patterns:
   DeadEnd: ["North"]
@@ -90,66 +95,96 @@ rotation_mapping:
     Rot270: ["North", "East", "South", "West"]
   status: "implemented_in_GetPreBuiltPatternDoors"
 
-GetPreBuiltPatternDoors:
-  owner: "BP_DungeonGenerator_V2"
-  status: "compiled_and_runtime_tested"
-  inputs:
-    Door_Pattern: "E_PreBuiltDoorPattern"
-    Base_Rotation: "E_PreBuiltDoorRotation"
-  outputs:
-    North: "Boolean"
-    East: "Boolean"
-    South: "Boolean"
-    West: "Boolean"
-  implementation: "Switch on E_PreBuiltDoorPattern followed by Switch on E_PreBuiltDoorRotation and explicit Return Nodes."
-  isolated_test:
-    input:
-      Door_Pattern: "Corner"
-      Base_Rotation: "Rot180"
-    output:
-      North: false
-      East: false
-      South: true
-      West: true
-    result: "confirmed"
-
-DoesPreBuiltPatternMatchCell:
-  owner: "BP_DungeonGenerator_V2"
-  status: "compiled_and_isolated_tested"
-  inputs:
-    Door_Pattern: "E_PreBuiltDoorPattern"
-    Base_Rotation: "E_PreBuiltDoorRotation"
-    Cell_Data: "ST_DungeonCell"
-  output:
-    Matches_Cell: "Boolean"
-  implementation:
-    - "Call GetPreBuiltPatternDoors"
-    - "Break ST_DungeonCell"
-    - "Compare North, East, South and West with Equal Boolean"
-    - "Combine all four comparisons with AND"
-  isolated_tests:
-    exact_match:
-      pattern: "Corner"
-      base_rotation: "Rot180"
-      cell_doors: ["South", "West"]
-      expected: true
-      actual: true
-      result: "confirmed"
-    incompatible_cell:
-      pattern: "Corner"
-      base_rotation: "Rot180"
-      cell_doors: ["South"]
-      expected: false
-      actual: false
+functions:
+  GetPreBuiltPatternDoors:
+    owner: "BP_DungeonGenerator_V2"
+    status: "compiled_and_runtime_tested"
+    isolated_test:
+      input: "Corner + Rot180"
+      output:
+        North: false
+        East: false
+        South: true
+        West: true
       result: "confirmed"
 
-compatibility_rule: "A fixed prebuilt room is valid only when its physical North/East/South/West doors exactly match the connections required by ST_DungeonCell."
+  DoesPreBuiltPatternMatchCell:
+    owner: "BP_DungeonGenerator_V2"
+    status: "compiled_and_isolated_tested"
+    isolated_tests:
+      - "Corner Rot180 vs South+West -> true"
+      - "Corner Rot180 vs South only -> false"
 
-protected_current_behavior:
-  - "bUseFixedDoorPattern remains false by default"
-  - "Current Start/Key/Boss prototypes remain flexible"
-  - "BP_RoomMaster_Dungeon remains procedural"
-  - "Init Room from Cell has not been modified"
-  - "PlaceChildRoomFromParent has not been modified"
+  FindMatchingPreBuiltDoorRotation:
+    owner: "BP_DungeonGenerator_V2"
+    status: "created_compiled_partial_integration"
+    result: "Can select a compatible Corner candidate, but final actor orientation is not fully validated."
 
-next_step: "Integrate BP_Room_PreBuilt_Test_Corner into the Normal room class-selection path as the first fixed prebuilt candidate, initially only when its authored South+West doors exactly match the cell. Keep BP_RoomMaster_Dungeon as fallback. Inspect the current class-selection section of PlaceChildRoomFromParent before wiring."
+  WorldDirectionToLocalDoorDirection:
+    owner: "BP_Room_PreBuilt_Base"
+    status: "created_and_connected_not_fully_validated"
+    direction_indexes:
+      North: 0
+      East: 1
+      South: 2
+      West: 3
+    warning: "Do not treat this mapping as final until every Corner orientation passes a focused visual/door alignment test."
+
+  GetLocalDoorFlagsFromCell:
+    status: "not_implemented"
+
+stable_current_generation:
+  MaxRooms: 10
+  total_physical_rooms: 13
+  composition:
+    Start: 1
+    Normal: 10
+    Key: 1
+    Boss: 1
+  seed_12345_tested: true
+  selected_room_yaw_table:
+    Rot0: 180.0
+    Rot90: 270.0
+    Rot180: 0.0
+    Rot270: 90.0
+  rule: "Freeze this table while the integration is paused."
+
+rejected_yaw_table_for_current_implementation:
+  Rot0: 180.0
+  Rot90: 90.0
+  Rot180: 0.0
+  Rot270: 270.0
+  result: "Corner PLACE FAIL after overlap retries."
+
+confirmed_bug_fix:
+  bug: "Empty child override of Get Room Bounds Data returned zero bounds."
+  affected_assets:
+    - "BP_Room_PreBuilt_Base_Child_Key"
+    - "BP_Room_PreBuilt_Test_Corner"
+  symptoms:
+    - "Bounds Center = 0,0,0"
+    - "Bounds Extent = 0,0,0"
+    - "Permanent overlap during all retries"
+    - "Physical generation stopped before 13 rooms"
+  fix: "Remove/recreate broken child override and inherit the parent implementation."
+  validation: "13 physical rooms restored."
+
+debug_status:
+  keep_temporarily:
+    - "BOUNDS TEST"
+    - "MOVE TEST"
+    - "PLACE FAIL | Index / Type / Class"
+    - "MVP: PREBUILT CORNER SELECTED"
+    - "Global Overlap"
+  separate_error_messages:
+    spawn: "DUNGEON ERROR SPAWN — SpawnActor returned invalid"
+    placement: "DUNGEON ERROR PLACE — No free position after retries"
+
+compatibility_rule: "A fixed prebuilt room is valid only when its physical doors, after final actor placement, exactly match the ST_DungeonCell connections."
+
+next_decision_options:
+  A: "Keep the grid-first generator and retry Corner integration later with a small isolated placement test."
+  B: "Remove fixed Corner from the beta path and continue toward corridors and playable 0.0.5.9."
+  C: "Redesign future layout growth around available/open doors after the first playable beta."
+
+recommended_immediate_priority: "Protect the stable 13-room generator and decide whether Corner is required for the first private beta."
